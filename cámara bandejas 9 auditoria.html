@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cámara Técnica PRO - Estática & Edición</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; background: #fff; color: #000; font-family: 'Courier New', monospace; overflow: hidden; }
+        #camera-container { position: relative; width: 100vw; height: 100vh; background: #fff; }
+        video { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; } 
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        
+        .ui { position: absolute; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; }
+        .top-info { display: flex; justify-content: space-between; pointer-events: auto; }
+        .top-info span { background: #000; color: #fff; padding: 5px 10px; font-size: 10px; border-radius: 4px; align-self: center; }
+        .controls { pointer-events: auto; display: flex; justify-content: center; padding-bottom: 25px; }
+        
+        button { 
+            padding: 15px 25px; font-size: 15px; font-weight: bold; border-radius: 8px; 
+            border: 2px solid #000; background: #fff; color: #000; cursor: pointer;
+            box-shadow: 0 4px 0 #000;
+        }
+        button:active { transform: translateY(2px); box-shadow: 0 2px 0 #000; }
+        #btn-fs { font-size: 11px; padding: 8px; border-width: 1px; opacity: 0.8; }
+
+        .overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.1); display: none; 
+            flex-direction: column; align-items: center; z-index: 20; pointer-events: auto;
+            padding-top: 60px;
+        }
+
+        .overlay h2 { background: rgba(0,0,0,0.8); color: #fff; padding: 10px 20px; border-radius: 5px; font-size: 18px; }
+        input { 
+            background: #fff; border: 3px solid #000; color: #000; padding: 15px; 
+            font-size: 20px; text-align: center; width: 85%; font-family: monospace;
+            outline: none; margin-bottom: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        #msg-edit { display: none; position: absolute; top: 120px; left: 50%; transform: translateX(-50%); background: #ffeb3b; color: #000; padding: 10px; font-weight: bold; border: 2px solid #000; z-index: 30; }
+    </style>
+</head>
+<body>
+
+<div id="camera-container" onclick="handleCanvasClick(event)">
+    <video id="video" autoplay playsinline></video>
+    <canvas id="mainCanvas"></canvas>
+
+    <div id="msg-edit">MODO EDICIÓN (ESTÁTICO): Toca celda para 1 ó 10</div>
+
+    <div class="ui">
+        <div class="top-info">
+            <span>MAPEO TÉCNICO V1.2</span>
+            <button id="btn-fs" onclick="toggleFS()">[ PANTALLA COMPLETA ]</button>
+        </div>
+        <div class="controls">
+            <button onclick="captureStep()">TOMAR CAPTURA</button>
+        </div>
+    </div>
+
+    <div id="overlay-confirm" class="overlay">
+        <h2>¿CAPTURA CORRECTA?</h2>
+        <div style="display:flex; gap:10px; flex-wrap: wrap; justify-content: center;">
+            <button style="border-color:#ff4444; color:#ff4444;" onclick="location.reload()">REPETIR</button>
+            <button style="border-color:#ff9800; color:#ff9800;" onclick="startEditMode()">CORREGIR</button>
+            <button onclick="showNameStep()">OK, CONTINUAR</button>
+        </div>
+    </div>
+
+    <div id="overlay-name" class="overlay">
+        <h2>ID DE REFERENCIA</h2>
+        <input type="text" id="photoName" placeholder="REF_OBRA_01">
+        <button onclick="saveAllData()">GUARDAR JPG 4X + EXCEL</button>
+    </div>
+</div>
+
+<script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('mainCanvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    
+    let isPaused = false;
+    let isEditMode = false;
+    let gridParams = {};
+    let currentScores = [];
+    let capturedFrame = null; // Para guardar la imagen estática
+    const letras = "ONMLKJIHGFEDCBA".split("");
+
+    navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: "environment", width: 640, height: 480 } 
+    }).then(stream => { 
+        video.srcObject = stream;
+        setInterval(processFrame, 1000); 
+    });
+
+    function processFrame() {
+        if (isPaused) return; // Si está en pausa (o corregir), no hace nada aquí
+        
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        const w = canvas.width;
+        const h = canvas.height;
+
+        const sizePerCell = Math.min((w * 0.85) / 10, (h * 0.80) / 15);
+        const startX = (w - (sizePerCell * 10)) / 2 + 10; 
+        const startY = (h - (sizePerCell * 15)) / 2 + 10;
+        gridParams = { sizePerCell, startX, startY };
+
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, 0, w, h);
+
+        const innerPadding = sizePerCell * 0.12;
+        const innerSize = Math.floor(sizePerCell - innerPadding);
+        let tempScores = [];
+
+        drawLabels(ctx, startX, startY, sizePerCell);
+
+        for (let i = 0; i < 10; i++) {
+            for (let j = 0; j < 15; j++) {
+                const x = Math.floor(startX + (i * sizePerCell) + (innerPadding / 2));
+                const y = Math.floor(startY + (j * sizePerCell) + (innerPadding / 2));
+
+                ctx.save();
+                drawRoundedRect(ctx, x, y, innerSize, innerSize, innerSize * 0.25);
+                ctx.clip();
+                ctx.filter = "saturate(2.2) contrast(1.1)";
+                ctx.drawImage(video, 0, 0, w, h);
+                ctx.restore();
+
+                const cellData = ctx.getImageData(x, y, innerSize, innerSize).data;
+                const score = calculateCellScore(cellData);
+                
+                tempScores.push({ 
+                    col: 10 - i, row: letras[j], score: score, 
+                    x: x, y: y, size: innerSize, i: i, j: j 
+                });
+
+                drawScoreText(ctx, x, y, score, sizePerCell);
+            }
+        }
+        currentScores = tempScores;
+    }
+
+    function renderStaticGrid() {
+        // Esta función dibuja las celdas usando 'capturedFrame' en lugar de 'video'
+        const { sizePerCell, startX, startY } = gridParams;
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        drawLabels(ctx, startX, startY, sizePerCell);
+
+        currentScores.forEach(cell => {
+            ctx.save();
+            drawRoundedRect(ctx, cell.x, cell.y, cell.size, cell.size, cell.size * 0.25);
+            ctx.clip();
+            ctx.filter = "saturate(2.2) contrast(1.1)";
+            // DIBUJAR DESDE LA IMAGEN CAPTURADA, NO DEL VIDEO
+            ctx.drawImage(capturedFrame, 0, 0, canvas.width, canvas.height);
+            ctx.restore();
+
+            drawScoreText(ctx, cell.x, cell.y, cell.score, sizePerCell);
+        });
+    }
+
+    function drawLabels(c, startX, startY, sizePerCell) {
+        c.fillStyle = "#000";
+        c.font = `bold ${Math.round(sizePerCell/3)}px Arial`;
+        c.textAlign = "center";
+        for(let i=0; i<10; i++) c.fillText(10-i, startX + (i * sizePerCell) + sizePerCell/2, startY - 10);
+        c.textAlign = "right";
+        for(let j=0; j<15; j++) c.fillText(letras[j], startX - 10, startY + (j * sizePerCell) + sizePerCell/1.5);
+    }
+
+    function drawScoreText(c, x, y, score, sizePerCell) {
+        let textColor = (score <= 3) ? "#ff4d4d" : (score <= 7 ? "#ffff00" : "#00ff00");
+        const fontSize = Math.round(sizePerCell/2.8);
+        c.save();
+        c.fillStyle = "rgba(0, 0, 0, 0.5)";
+        c.fillRect(x + 2, y + 2, fontSize * 1.2, fontSize * 1.2);
+        c.fillStyle = textColor;
+        c.font = `bold ${fontSize}px Arial`;
+        c.textAlign = "left";
+        c.fillText(score, x + 5, y + fontSize);
+        c.restore();
+    }
+
+    function handleCanvasClick(e) {
+        if (!isEditMode) return;
+        const rect = canvas.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const clickY = e.clientY - rect.top;
+
+        currentScores.forEach(cell => {
+            if (clickX >= cell.x && clickX <= cell.x + cell.size &&
+                clickY >= cell.y && clickY <= cell.y + cell.size) {
+                cell.score = (cell.score === 1) ? 10 : 1;
+                renderStaticGrid();
+            }
+        });
+    }
+
+    function captureStep() { 
+        // 1. Guardar el frame actual como imagen estática antes de pausar
+        capturedFrame = document.createElement('canvas');
+        capturedFrame.width = canvas.width;
+        capturedFrame.height = canvas.height;
+        const cfCtx = capturedFrame.getContext('2d');
+        cfCtx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        isPaused = true; 
+        document.getElementById('overlay-confirm').style.display = 'flex'; 
+    }
+
+    function startEditMode() {
+        isEditMode = true;
+        document.getElementById('overlay-confirm').style.display = 'none';
+        document.getElementById('msg-edit').style.display = 'block';
+        
+        renderStaticGrid(); // Dibujar la primera vez en modo estático
+
+        const btnOk = document.createElement('button');
+        btnOk.id = "btn-done-edit";
+        btnOk.innerText = "FINALIZAR CORRECCIÓN";
+        btnOk.style.cssText = "position:absolute; bottom:30px; left:50%; transform:translateX(-50%); z-index:100; background:#4CAF50; color:white;";
+        btnOk.onclick = () => {
+            isEditMode = false;
+            document.getElementById('msg-edit').style.display = 'none';
+            btnOk.remove();
+            showNameStep();
+        };
+        document.body.appendChild(btnOk);
+    }
+
+    function calculateCellScore(data) {
+        let hits = 0;
+        const total = data.length / 4;
+        for (let i = 0; i < data.length; i += 4) {
+            const r = data[i]; const g = data[i + 1]; const b = data[i + 2];
+            if ((g > r * 1.15 && g > b * 1.1) || (r > 130 && g > 130 && b < 100)) hits++;
+        }
+        const ratio = hits / total;
+        return ratio < 0.01 ? 1 : Math.min(10, Math.ceil(ratio * 18)); 
+    }
+
+    function drawRoundedRect(c, x, y, w, h, r) {
+        c.beginPath();
+        c.moveTo(x+r, y); c.lineTo(x+w-r, y); c.quadraticCurveTo(x+w, y, x+w, y+r);
+        c.lineTo(x+w, y+h-r); c.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+        c.lineTo(x+r, y+h); c.quadraticCurveTo(x, y+h, x, y+h-r);
+        c.lineTo(x, y+r); c.quadraticCurveTo(x, y, x+r, y);
+        c.closePath();
+    }
+
+    function toggleFS() {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+        else document.exitFullscreen();
+    }
+
+    function showNameStep() { 
+        document.getElementById('overlay-confirm').style.display = 'none'; 
+        document.getElementById('overlay-name').style.display = 'flex'; 
+        document.getElementById('photoName').focus();
+    }
+
+    function saveAllData() {
+        const input = document.getElementById('photoName');
+        const name = input.value || "SCAN_TECH";
+        const ts = new Date().toLocaleString();
+
+        const exportCanvas = document.createElement('canvas');
+        exportCanvas.width = canvas.width * 2; 
+        exportCanvas.height = canvas.height * 2;
+        const eCtx = exportCanvas.getContext('2d');
+        eCtx.scale(2, 2); 
+        eCtx.drawImage(canvas, 0, 0);
+        
+        const linkImg = document.createElement('a');
+        linkImg.download = `${name}_4X_GRID.jpg`;
+        linkImg.href = exportCanvas.toDataURL('image/jpeg', 1.0);
+        linkImg.click();
+
+        let csvContent = "data:text/csv;charset=utf-8,Foto;Columna;Fila;Score;Fecha\n";
+        currentScores.forEach(item => {
+            csvContent += `${name};${item.col};${item.row};${item.score};${ts}\n`;
+        });
+        const linkExl = document.createElement('a');
+        linkExl.setAttribute("href", encodeURI(csvContent));
+        linkExl.setAttribute("download", `${name}_DATOS.csv`);
+        document.body.appendChild(linkExl);
+        linkExl.click();
+        
+        setTimeout(() => location.reload(), 1000);
+    }
+</script>
+</body>
+</html>
+
