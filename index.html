@@ -3,56 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Cámara Técnica PRO - Estática & Edición</title>
+    <title>Cámara Técnica PRO - ULTRA FLUID</title>
     <style>
         * { box-sizing: border-box; }
-        body { margin: 0; background: #fff; color: #000; font-family: 'Courier New', monospace; overflow: hidden; }
-        #camera-container { position: relative; width: 100vw; height: 100vh; background: #fff; }
+        body { margin: 0; background: #000; font-family: 'Courier New', monospace; overflow: hidden; }
+        #camera-container { position: relative; width: 100vw; height: 100vh; background: #fff; display: flex; justify-content: center; align-items: center; }
         video { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; } 
-        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        canvas { max-width: 100%; max-height: 100%; object-fit: contain; cursor: crosshair; }
         
         .ui { position: absolute; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; }
         .top-info { display: flex; justify-content: space-between; pointer-events: auto; }
-        .top-info span { background: #000; color: #fff; padding: 5px 10px; font-size: 10px; border-radius: 4px; align-self: center; }
+        .top-info span { background: #000; color: #fff; padding: 5px 10px; font-size: 10px; border-radius: 4px; }
         .controls { pointer-events: auto; display: flex; justify-content: center; padding-bottom: 25px; }
         
         button { 
-            padding: 15px 25px; font-size: 15px; font-weight: bold; border-radius: 8px; 
+            padding: 15px 25px; font-size: 14px; font-weight: bold; border-radius: 8px; 
             border: 2px solid #000; background: #fff; color: #000; cursor: pointer;
-            box-shadow: 0 4px 0 #000;
+            box-shadow: 0 4px 0 #000; margin: 5px;
         }
         button:active { transform: translateY(2px); box-shadow: 0 2px 0 #000; }
-        #btn-fs { font-size: 11px; padding: 8px; border-width: 1px; opacity: 0.8; }
+        .btn-success { background: #4CAF50 !important; color: white !important; border-color: #2e7d32 !important; }
 
         .overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 255, 255, 0.1); display: none; 
-            flex-direction: column; align-items: center; z-index: 20; pointer-events: auto;
-            padding-top: 60px;
+            background: rgba(255, 255, 255, 0.98); display: none; 
+            flex-direction: column; align-items: center; justify-content: center; z-index: 20; pointer-events: auto;
+            padding: 20px;
         }
-
-        .overlay h2 { background: rgba(0,0,0,0.8); color: #fff; padding: 10px 20px; border-radius: 5px; font-size: 18px; }
-        input { 
-            background: #fff; border: 3px solid #000; color: #000; padding: 15px; 
-            font-size: 20px; text-align: center; width: 85%; font-family: monospace;
-            outline: none; margin-bottom: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        }
-
-        #msg-edit { display: none; position: absolute; top: 120px; left: 50%; transform: translateX(-50%); background: #ffeb3b; color: #000; padding: 10px; font-weight: bold; border: 2px solid #000; z-index: 30; }
+        #msg-edit { display: none; position: absolute; top: 80px; left: 50%; transform: translateX(-50%); background: #ffeb3b; padding: 10px; border: 2px solid #000; z-index: 30; font-weight: bold; }
+        input { border: 3px solid #000; padding: 15px; font-size: 18px; width: 80%; text-align: center; margin-bottom: 15px; outline: none; }
     </style>
 </head>
 <body>
 
-<div id="camera-container" onclick="handleCanvasClick(event)">
+<div id="camera-container">
     <video id="video" autoplay playsinline></video>
     <canvas id="mainCanvas"></canvas>
 
-    <div id="msg-edit">MODO EDICIÓN (ESTÁTICO): Toca celda para 1 ó 10</div>
+    <div id="msg-edit">MODO EDICIÓN: Toca celdas para cambiar</div>
 
     <div class="ui">
         <div class="top-info">
-            <span>MAPEO TÉCNICO V1.2</span>
-            <button id="btn-fs" onclick="toggleFS()">[ PANTALLA COMPLETA ]</button>
+            <span>ENGINE V3 - 60FPS</span>
+            <button onclick="toggleFS()" style="padding:5px; font-size:10px;">[ FS ]</button>
         </div>
         <div class="controls">
             <button onclick="captureStep()">TOMAR CAPTURA</button>
@@ -60,156 +53,162 @@
     </div>
 
     <div id="overlay-confirm" class="overlay">
-        <h2>¿CAPTURA CORRECTA?</h2>
-        <div style="display:flex; gap:10px; flex-wrap: wrap; justify-content: center;">
-            <button style="border-color:#ff4444; color:#ff4444;" onclick="location.reload()">REPETIR</button>
-            <button style="border-color:#ff9800; color:#ff9800;" onclick="startEditMode()">CORREGIR</button>
-            <button onclick="showNameStep()">OK, CONTINUAR</button>
+        <h2>IMAGEN CAPTURADA</h2>
+        <div style="display:flex; gap:10px;">
+            <button onclick="location.reload()" style="color:red">REPETIR</button>
+            <button onclick="startEditMode()" style="color:orange">CORREGIR</button>
+            <button class="btn-success" onclick="startNamingFlow()">CONTINUAR</button>
         </div>
     </div>
 
-    <div id="overlay-name" class="overlay">
-        <h2>ID DE REFERENCIA</h2>
-        <input type="text" id="photoName" placeholder="REF_OBRA_01">
-        <button onclick="saveAllData()">GUARDAR JPG 4X + EXCEL</button>
+    <div id="overlay-naming" class="overlay">
+        <h2 id="naming-title">ID PROYECTO</h2>
+        <input type="text" id="nameInput" autocomplete="off">
+        <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:5px;">
+            <button onclick="processNamingStep()">SIGUIENTE</button>
+            <button id="btn-same" onclick="nameSameAs()" style="display:none">IGUAL ANTERIOR</button>
+            <button id="btn-empty" onclick="nameEmpty()" style="display:none">VACIO</button>
+        </div>
     </div>
 </div>
 
 <script>
     const video = document.getElementById('video');
     const canvas = document.getElementById('mainCanvas');
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const ctx = canvas.getContext('2d', { alpha: false }); // Optimización de contexto
     
     let isPaused = false;
     let isEditMode = false;
     let gridParams = {};
     let currentScores = [];
-    let capturedFrame = null; // Para guardar la imagen estática
-    const letras = "ONMLKJIHGFEDCBA".split("");
+    let capturedFrame = null;
+    let captureTS = "";
+    
+    const letras = "ABCDEFGHIJKLMNO".split("");
+    let namingIdx = -1; 
+    let rowNames = {};
+    let lastValue = "";
+    let photoID = "";
 
+    // Iniciar Cámara con restricciones realistas para evitar lag
     navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: "environment", width: 640, height: 480 } 
+        video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
     }).then(stream => { 
         video.srcObject = stream;
-        setInterval(processFrame, 1000); 
+        video.onloadedmetadata = () => {
+            resize();
+            requestAnimationFrame(drawLoop);
+        };
     });
 
-    function processFrame() {
-        if (isPaused) return; // Si está en pausa (o corregir), no hace nada aquí
+    function resize() {
+        const vW = video.videoWidth;
+        const vH = video.videoHeight;
+        const screenW = window.innerWidth;
+        const screenH = window.innerHeight;
         
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        const w = canvas.width;
-        const h = canvas.height;
+        // Ajuste sin deformación
+        const videoAspect = vW / vH;
+        canvas.width = screenW;
+        canvas.height = screenW / videoAspect;
 
-        const sizePerCell = Math.min((w * 0.85) / 10, (h * 0.80) / 15);
-        const startX = (w - (sizePerCell * 10)) / 2 + 10; 
-        const startY = (h - (sizePerCell * 15)) / 2 + 10;
-        gridParams = { sizePerCell, startX, startY };
-
-        ctx.fillStyle = "#fff";
-        ctx.fillRect(0, 0, w, h);
-
-        const innerPadding = sizePerCell * 0.12;
-        const innerSize = Math.floor(sizePerCell - innerPadding);
-        let tempScores = [];
-
-        drawLabels(ctx, startX, startY, sizePerCell);
-
-        for (let i = 0; i < 10; i++) {
-            for (let j = 0; j < 15; j++) {
-                const x = Math.floor(startX + (i * sizePerCell) + (innerPadding / 2));
-                const y = Math.floor(startY + (j * sizePerCell) + (innerPadding / 2));
-
-                ctx.save();
-                drawRoundedRect(ctx, x, y, innerSize, innerSize, innerSize * 0.25);
-                ctx.clip();
-                ctx.filter = "saturate(2.2) contrast(1.1)";
-                ctx.drawImage(video, 0, 0, w, h);
-                ctx.restore();
-
-                const cellData = ctx.getImageData(x, y, innerSize, innerSize).data;
-                const score = calculateCellScore(cellData);
-                
-                tempScores.push({ 
-                    col: 10 - i, row: letras[j], score: score, 
-                    x: x, y: y, size: innerSize, i: i, j: j 
-                });
-
-                drawScoreText(ctx, x, y, score, sizePerCell);
-            }
+        if (canvas.height > screenH) {
+            canvas.height = screenH;
+            canvas.width = screenH * videoAspect;
         }
-        currentScores = tempScores;
+        
+        const size = Math.min((canvas.width * 0.85) / 10, (canvas.height * 0.85) / 15);
+        gridParams = {
+            size: size,
+            startX: (canvas.width - (size * 10)) / 2,
+            startY: (canvas.height - (size * 15)) / 2,
+            inner: size * 0.9
+        };
     }
 
-    function renderStaticGrid() {
-        // Esta función dibuja las celdas usando 'capturedFrame' en lugar de 'video'
-        const { sizePerCell, startX, startY } = gridParams;
+    // BUCLE DE RENDERIZADO (60 FPS)
+    function drawLoop() {
+        if (!isPaused) {
+            renderBase(video);
+            requestAnimationFrame(drawLoop);
+        }
+    }
+
+    function renderBase(source) {
+        // Fondo blanco (Borra todo lo de fuera)
         ctx.fillStyle = "#fff";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
-        drawLabels(ctx, startX, startY, sizePerCell);
+        const { size, startX, startY, inner } = gridParams;
 
-        currentScores.forEach(cell => {
-            ctx.save();
-            drawRoundedRect(ctx, cell.x, cell.y, cell.size, cell.size, cell.size * 0.25);
-            ctx.clip();
-            ctx.filter = "saturate(2.2) contrast(1.1)";
-            // DIBUJAR DESDE LA IMAGEN CAPTURADA, NO DEL VIDEO
-            ctx.drawImage(capturedFrame, 0, 0, canvas.width, canvas.height);
-            ctx.restore();
+        // Etiquetas
+        ctx.fillStyle = "#000";
+        ctx.font = `bold ${size/3}px Arial`;
+        ctx.textAlign = "center";
+        for(let i=0; i<10; i++) ctx.fillText(10-i, startX + (i*size) + size/2, startY - 10);
+        ctx.textAlign = "right";
+        for(let j=0; j<15; j++) ctx.fillText(letras[14-j], startX - 10, startY + (j*size) + size/1.5);
 
-            drawScoreText(ctx, cell.x, cell.y, cell.score, sizePerCell);
-        });
-    }
+        // Dibujar celdas (Retícula)
+        for (let i = 0; i < 10; i++) {
+            for (let j = 0; j < 15; j++) {
+                const x = startX + (i * size) + (size - inner)/2;
+                const y = startY + (j * size) + (size - inner)/2;
+                
+                ctx.save();
+                drawRoundedRect(ctx, x, y, inner, inner, inner * 0.2);
+                ctx.clip();
+                // Solo dibujamos la porción correspondiente del video
+                ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
+                ctx.restore();
 
-    function drawLabels(c, startX, startY, sizePerCell) {
-        c.fillStyle = "#000";
-        c.font = `bold ${Math.round(sizePerCell/3)}px Arial`;
-        c.textAlign = "center";
-        for(let i=0; i<10; i++) c.fillText(10-i, startX + (i * sizePerCell) + sizePerCell/2, startY - 10);
-        c.textAlign = "right";
-        for(let j=0; j<15; j++) c.fillText(letras[j], startX - 10, startY + (j * sizePerCell) + sizePerCell/1.5);
-    }
-
-    function drawScoreText(c, x, y, score, sizePerCell) {
-        let textColor = (score <= 3) ? "#ff4d4d" : (score <= 7 ? "#ffff00" : "#00ff00");
-        const fontSize = Math.round(sizePerCell/2.8);
-        c.save();
-        c.fillStyle = "rgba(0, 0, 0, 0.5)";
-        c.fillRect(x + 2, y + 2, fontSize * 1.2, fontSize * 1.2);
-        c.fillStyle = textColor;
-        c.font = `bold ${fontSize}px Arial`;
-        c.textAlign = "left";
-        c.fillText(score, x + 5, y + fontSize);
-        c.restore();
-    }
-
-    function handleCanvasClick(e) {
-        if (!isEditMode) return;
-        const rect = canvas.getBoundingClientRect();
-        const clickX = e.clientX - rect.left;
-        const clickY = e.clientY - rect.top;
-
-        currentScores.forEach(cell => {
-            if (clickX >= cell.x && clickX <= cell.x + cell.size &&
-                clickY >= cell.y && clickY <= cell.y + cell.size) {
-                cell.score = (cell.score === 1) ? 10 : 1;
-                renderStaticGrid();
+                // Si hay scoring (estático), lo ponemos encima
+                if (isPaused) {
+                    const scoreObj = currentScores.find(s => s.i === i && s.j === j);
+                    if (scoreObj) drawScoreUI(ctx, x, y, scoreObj.score, size);
+                }
             }
-        });
+        }
     }
 
-    function captureStep() { 
-        // 1. Guardar el frame actual como imagen estática antes de pausar
+    function captureStep() {
+        captureTS = new Date().toLocaleString();
+        
+        // Congelar imagen
         capturedFrame = document.createElement('canvas');
         capturedFrame.width = canvas.width;
         capturedFrame.height = canvas.height;
-        const cfCtx = capturedFrame.getContext('2d');
-        cfCtx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        capturedFrame.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        isPaused = true;
+        
+        // CALCULAR SCORING SOLO AQUÍ (UNA VEZ)
+        runHeavyCalculations();
+        renderBase(capturedFrame);
+        document.getElementById('overlay-confirm').style.display = 'flex';
+    }
 
-        isPaused = true; 
-        document.getElementById('overlay-confirm').style.display = 'flex'; 
+    function runHeavyCalculations() {
+        const { size, startX, startY, inner } = gridParams;
+        currentScores = [];
+        const tCtx = capturedFrame.getContext('2d');
+
+        for (let i = 0; i < 10; i++) {
+            for (let j = 0; j < 15; j++) {
+                const x = Math.floor(startX + (i * size) + (size - inner)/2);
+                const y = Math.floor(startY + (j * size) + (size - inner)/2);
+                
+                const data = tCtx.getImageData(x, y, Math.floor(inner), Math.floor(inner)).data;
+                let hits = 0;
+                for (let k = 0; k < data.length; k += 4) {
+                    if (data[k+1] > data[k] * 1.1 && data[k+1] > data[k+2]) hits++;
+                }
+                const ratio = hits / (data.length / 4);
+                const score = ratio < 0.01 ? 1 : Math.min(10, Math.ceil(ratio * 20));
+                
+                currentScores.push({ i, j, col: 10-i, rowLet: letras[14-j], score, x, y });
+            }
+        }
     }
 
     function startEditMode() {
@@ -217,30 +216,92 @@
         document.getElementById('overlay-confirm').style.display = 'none';
         document.getElementById('msg-edit').style.display = 'block';
         
-        renderStaticGrid(); // Dibujar la primera vez en modo estático
-
-        const btnOk = document.createElement('button');
-        btnOk.id = "btn-done-edit";
-        btnOk.innerText = "FINALIZAR CORRECCIÓN";
-        btnOk.style.cssText = "position:absolute; bottom:30px; left:50%; transform:translateX(-50%); z-index:100; background:#4CAF50; color:white;";
-        btnOk.onclick = () => {
-            isEditMode = false;
-            document.getElementById('msg-edit').style.display = 'none';
-            btnOk.remove();
-            showNameStep();
+        canvas.onclick = (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+            
+            currentScores.forEach(s => {
+                if (x > s.x && x < s.x + gridParams.inner && y > s.y && y < s.y + gridParams.inner) {
+                    s.score = s.score >= 5 ? 1 : 10;
+                    renderBase(capturedFrame);
+                }
+            });
         };
-        document.body.appendChild(btnOk);
     }
 
-    function calculateCellScore(data) {
-        let hits = 0;
-        const total = data.length / 4;
-        for (let i = 0; i < data.length; i += 4) {
-            const r = data[i]; const g = data[i + 1]; const b = data[i + 2];
-            if ((g > r * 1.15 && g > b * 1.1) || (r > 130 && g > 130 && b < 100)) hits++;
+    // --- FLUJO DE NOMBRES ---
+    function startNamingFlow() {
+        isEditMode = false;
+        canvas.onclick = null;
+        document.getElementById('overlay-confirm').style.display = 'none';
+        document.getElementById('msg-edit').style.display = 'none';
+        document.getElementById('overlay-naming').style.display = 'flex';
+        namingIdx = -1;
+        updateNamingUI();
+    }
+
+    function updateNamingUI() {
+        const input = document.getElementById('nameInput');
+        input.value = "";
+        if (namingIdx === -1) {
+            document.getElementById('naming-title').innerText = "NOMBRE DE LA FOTO";
+            document.getElementById('btn-same').style.display = "none";
+            document.getElementById('btn-empty').style.display = "none";
+        } else {
+            document.getElementById('naming-title').innerText = "NOMBRE FILA " + letras[namingIdx];
+            document.getElementById('btn-same').style.display = "inline-block";
+            document.getElementById('btn-empty').style.display = "inline-block";
         }
-        const ratio = hits / total;
-        return ratio < 0.01 ? 1 : Math.min(10, Math.ceil(ratio * 18)); 
+        input.focus();
+    }
+
+    function processNamingStep() {
+        const v = document.getElementById('nameInput').value.trim() || "S/N";
+        saveAndNext(v);
+    }
+    function nameSameAs() { saveAndNext(lastValue || "S/N"); }
+    function nameEmpty() { saveAndNext("VACIO"); }
+
+    function saveAndNext(val) {
+        if (namingIdx === -1) photoID = val;
+        else {
+            rowNames[letras[namingIdx]] = val;
+            lastValue = val;
+        }
+        namingIdx++;
+        if (namingIdx < letras.length) updateNamingUI();
+        else finalExport();
+    }
+
+    function finalExport() {
+        const exportTS = new Date().toLocaleString();
+        
+        // CSV: Nombre Foto, Nombre Fila, Columna, Scoring, TS Captura, TS Export
+        let csv = "Nombre de la Foto;Nombre de la fila;nº de la columna;scoring;timestamp captura;timestamp exporto\n";
+        
+        // Recorrer de A a O (Orden solicitado)
+        letras.forEach(L => {
+            const filaData = currentScores.filter(s => s.rowLet === L);
+            filaData.sort((a,b) => b.col - a.col); // 10 a 1
+            filaData.forEach(c => {
+                csv += `${photoID};${rowNames[L]};${c.col};${c.score};${captureTS};${exportTS}\n`;
+            });
+        });
+
+        // Descarga CSV
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `${photoID}.csv`; a.click();
+
+        // Descarga JPG
+        const imgL = document.createElement('a');
+        imgL.download = `${photoID}.jpg`;
+        imgL.href = canvas.toDataURL('image/jpeg', 0.9);
+        imgL.click();
+
+        setTimeout(() => location.reload(), 1000);
     }
 
     function drawRoundedRect(c, x, y, w, h, r) {
@@ -252,47 +313,22 @@
         c.closePath();
     }
 
+    function drawScoreUI(c, x, y, score, size) {
+        const color = score <= 3 ? "#ff4d4d" : (score <= 7 ? "#ffff00" : "#00ff00");
+        c.fillStyle = "rgba(0,0,0,0.8)";
+        c.fillRect(x+2, y+2, size/2.2, size/2.2);
+        c.fillStyle = color;
+        c.font = `bold ${size/2.8}px Arial`;
+        c.textAlign = "left";
+        c.fillText(score, x+5, y + size/2.8 + 2);
+    }
+
     function toggleFS() {
         if (!document.fullscreenElement) document.documentElement.requestFullscreen();
         else document.exitFullscreen();
     }
 
-    function showNameStep() { 
-        document.getElementById('overlay-confirm').style.display = 'none'; 
-        document.getElementById('overlay-name').style.display = 'flex'; 
-        document.getElementById('photoName').focus();
-    }
-
-    function saveAllData() {
-        const input = document.getElementById('photoName');
-        const name = input.value || "SCAN_TECH";
-        const ts = new Date().toLocaleString();
-
-        const exportCanvas = document.createElement('canvas');
-        exportCanvas.width = canvas.width * 2; 
-        exportCanvas.height = canvas.height * 2;
-        const eCtx = exportCanvas.getContext('2d');
-        eCtx.scale(2, 2); 
-        eCtx.drawImage(canvas, 0, 0);
-        
-        const linkImg = document.createElement('a');
-        linkImg.download = `${name}_4X_GRID.jpg`;
-        linkImg.href = exportCanvas.toDataURL('image/jpeg', 1.0);
-        linkImg.click();
-
-        let csvContent = "data:text/csv;charset=utf-8,Foto;Columna;Fila;Score;Fecha\n";
-        currentScores.forEach(item => {
-            csvContent += `${name};${item.col};${item.row};${item.score};${ts}\n`;
-        });
-        const linkExl = document.createElement('a');
-        linkExl.setAttribute("href", encodeURI(csvContent));
-        linkExl.setAttribute("download", `${name}_DATOS.csv`);
-        document.body.appendChild(linkExl);
-        linkExl.click();
-        
-        setTimeout(() => location.reload(), 1000);
-    }
+    window.onresize = resize;
 </script>
 </body>
 </html>
-
