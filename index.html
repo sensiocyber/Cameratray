@@ -7,6 +7,25 @@
    <style>
     * { box-sizing: border-box; }
     
+    #view-container { 
+    flex: 1; /* Permite que crezca dinámicamente */
+    position: relative; 
+    background: #000; 
+    overflow: hidden; /* Evita scrolls accidentales en fullscreen */
+    display: flex; 
+    justify-content: center; 
+    align-items: center;
+}
+
+canvas { 
+    /* Ajuste para que en pantalla completa no se deforme */
+    max-width: 100%; 
+    max-height: 100%; 
+    width: auto; 
+    height: auto;
+    object-fit: contain;
+}
+    
     body { 
         margin: 0; 
         background: #111; 
@@ -17,18 +36,7 @@
         overflow: hidden; 
         color: white; 
     }
-    
-    #view-container { 
-        flex: 0 0 65%; /* Reducido para dar más espacio al panel de abajo */
-        position: relative; 
-        background: #000; 
-        overflow: auto; /* Permite scroll si la imagen es grande */
-        display: flex; 
-        justify-content: center; 
-        align-items: center;
-        touch-action: pan-x pan-y; /* Habilita el scroll con los dedos */
-        -webkit-overflow-scrolling: touch;
-    }
+
 
     canvas { 
         /* AJUSTE DE TAMAÑO: He bajado al 75% para que veas todo de un vistazo */
@@ -103,6 +111,15 @@
 
 </head>
 <body>
+
+<div id="view-container">
+    <div id="step-label" class="step-info">PASO 1: ENCUADRE</div>
+    <button onclick="toggleFullScreen()" style="position: absolute; top: 10px; right: 10px; z-index: 1001; background: rgba(0,0,0,0.6); border: 1px solid #777; color: white; padding: 8px; border-radius: 8px; font-size: 12px;">
+        Fullscreen ⛶
+    </button>
+    <canvas id="mainCanvas"></canvas>
+    <video id="video" autoplay playsinline></video>
+</div>
 
 <div id="view-container">
     <div id="step-label" class="step-info">PASO 1: ENCUADRE</div>
@@ -344,6 +361,20 @@ function getScoreColor(score) {
     });
     canvas.addEventListener('pointerup', () => draggingIdx = null);
 
+    function toggleFullScreen() {
+    if (!document.fullscreenElement) {
+        // Entrar en pantalla completa
+        document.documentElement.requestFullscreen().catch(err => {
+            alert(`Error al intentar modo pantalla completa: ${err.message}`);
+        });
+    } else {
+        // Salir de pantalla completa
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        }
+    }
+}
+    
     function exportData() {
         let csv = "ID;Col;Fila;Score;TS\n";
         cellScores.forEach(s => csv += `${trayID};${colNames[LETTERS[s.c]]};${s.r+1};${s.score};${tsCapture}\n`);
