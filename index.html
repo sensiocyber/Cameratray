@@ -3,35 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Cámara Técnica PRO - ULTRA FLUID</title>
+    <title>Cámara Técnica PRO - V5.0 (Info en Imagen)</title>
     <style>
         * { box-sizing: border-box; }
         body { margin: 0; background: #000; font-family: 'Courier New', monospace; overflow: hidden; }
         #camera-container { position: relative; width: 100vw; height: 100vh; background: #fff; display: flex; justify-content: center; align-items: center; }
         video { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; } 
-        canvas { max-width: 100%; max-height: 100%; object-fit: contain; cursor: crosshair; }
+        canvas { max-width: 100%; max-height: 100%; object-fit: contain; }
         
-        .ui { position: absolute; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; }
+        .ui { position: absolute; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; padding: 10px; }
         .top-info { display: flex; justify-content: space-between; pointer-events: auto; }
         .top-info span { background: #000; color: #fff; padding: 5px 10px; font-size: 10px; border-radius: 4px; }
-        .controls { pointer-events: auto; display: flex; justify-content: center; padding-bottom: 25px; }
+        .controls { pointer-events: auto; display: flex; justify-content: center; padding-bottom: 10px; z-index: 15; }
         
         button { 
             padding: 15px 25px; font-size: 14px; font-weight: bold; border-radius: 8px; 
             border: 2px solid #000; background: #fff; color: #000; cursor: pointer;
             box-shadow: 0 4px 0 #000; margin: 5px;
         }
-        button:active { transform: translateY(2px); box-shadow: 0 2px 0 #000; }
+        button:disabled { opacity: 0.3; cursor: not-allowed; box-shadow: none; transform: none; }
         .btn-success { background: #4CAF50 !important; color: white !important; border-color: #2e7d32 !important; }
 
         .overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 255, 255, 0.98); display: none; 
-            flex-direction: column; align-items: center; justify-content: center; z-index: 20; pointer-events: auto;
-            padding: 20px;
+            display: none; flex-direction: column; align-items: center; z-index: 20; pointer-events: auto;
         }
+        #overlay-confirm { justify-content: flex-end; padding-bottom: 15px; background: transparent; }
+        #overlay-naming { justify-content: flex-start; padding-top: 60px; background: rgba(255,255,255,0.1); }
+
+        .naming-box {
+            background: rgba(255, 255, 255, 0.98); padding: 15px; border-radius: 12px;
+            border: 3px solid #000; width: 90%; max-width: 400px; text-align: center;
+        }
+        input { border: 3px solid #000; padding: 15px; font-size: 18px; width: 100%; text-align: center; margin-bottom: 10px; outline: none; }
         #msg-edit { display: none; position: absolute; top: 80px; left: 50%; transform: translateX(-50%); background: #ffeb3b; padding: 10px; border: 2px solid #000; z-index: 30; font-weight: bold; }
-        input { border: 3px solid #000; padding: 15px; font-size: 18px; width: 80%; text-align: center; margin-bottom: 15px; outline: none; }
     </style>
 </head>
 <body>
@@ -39,35 +44,35 @@
 <div id="camera-container">
     <video id="video" autoplay playsinline></video>
     <canvas id="mainCanvas"></canvas>
-
-    <div id="msg-edit">MODO EDICIÓN: Toca celdas para cambiar</div>
+    <div id="msg-edit">MODO EDICIÓN ACTIVADO</div>
 
     <div class="ui">
         <div class="top-info">
-            <span>ENGINE V3 - 60FPS</span>
+            <span>UHD DATA-OVERLAY V5.0</span>
             <button onclick="toggleFS()" style="padding:5px; font-size:10px;">[ FS ]</button>
         </div>
-        <div class="controls">
-            <button onclick="captureStep()">TOMAR CAPTURA</button>
+        <div class="controls" id="capture-container">
+            <button onclick="captureStep()" id="btn-main-capture">TOMAR CAPTURA</button>
         </div>
     </div>
 
     <div id="overlay-confirm" class="overlay">
-        <h2>IMAGEN CAPTURADA</h2>
-        <div style="display:flex; gap:10px;">
-            <button onclick="location.reload()" style="color:red">REPETIR</button>
-            <button onclick="startEditMode()" style="color:orange">CORREGIR</button>
-            <button class="btn-success" onclick="startNamingFlow()">CONTINUAR</button>
+        <div style="display:flex; justify-content: center; gap:5px; background: rgba(255,255,255,0.6); padding: 10px; border-radius: 15px;">
+            <button onclick="location.reload()" style="color:red;">REPETIR</button>
+            <button onclick="startEditMode()" style="color:orange;">CORREGIR</button>
+            <button class="btn-success" onclick="startNamingFlow()">OK</button>
         </div>
     </div>
 
     <div id="overlay-naming" class="overlay">
-        <h2 id="naming-title">ID PROYECTO</h2>
-        <input type="text" id="nameInput" autocomplete="off">
-        <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:5px;">
-            <button onclick="processNamingStep()">SIGUIENTE</button>
-            <button id="btn-same" onclick="nameSameAs()" style="display:none">IGUAL ANTERIOR</button>
-            <button id="btn-empty" onclick="nameEmpty()" style="display:none">VACIO</button>
+        <div class="naming-box">
+            <h2 id="naming-title" style="font-size:16px; margin: 0 0 10px 0;">ID PROYECTO</h2>
+            <input type="text" id="nameInput" autocomplete="off" oninput="handleInput(this)">
+            <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:5px;">
+                <button onclick="processNamingStep()" id="btn-next">SIGUIENTE</button>
+                <button id="btn-same" onclick="nameSameAs()" style="display:none;">IGUAL ANT.</button>
+                <button id="btn-empty" onclick="nameEmpty()" style="display:none;">VACIO</button>
+            </div>
         </div>
     </div>
 </div>
@@ -75,97 +80,83 @@
 <script>
     const video = document.getElementById('video');
     const canvas = document.getElementById('mainCanvas');
-    const ctx = canvas.getContext('2d', { alpha: false }); // Optimización de contexto
+    const ctx = canvas.getContext('2d', { alpha: false });
     
-    let isPaused = false;
-    let isEditMode = false;
-    let gridParams = {};
-    let currentScores = [];
-    let capturedFrame = null;
-    let captureTS = "";
-    
+    let isPaused = false, isEditMode = false, isExporting = false;
+    let gridParams = {}, currentScores = [], captureTS = "";
+    let rawVideoFrame = null; 
     const letras = "ABCDEFGHIJKLMNO".split("");
-    let namingIdx = -1; 
-    let rowNames = {};
-    let lastValue = "";
-    let photoID = "";
+    let namingIdx = -1, rowNames = {}, lastValue = "", photoID = "";
 
-    // Iniciar Cámara con restricciones realistas para evitar lag
     navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
+        video: { facingMode: "environment", width: { ideal: 4096 }, height: { ideal: 2160 } }
     }).then(stream => { 
         video.srcObject = stream;
-        video.onloadedmetadata = () => {
-            resize();
-            requestAnimationFrame(drawLoop);
-        };
+        video.onloadedmetadata = () => { resize(); requestAnimationFrame(drawLoop); };
     });
 
     function resize() {
-        const vW = video.videoWidth;
-        const vH = video.videoHeight;
-        const screenW = window.innerWidth;
-        const screenH = window.innerHeight;
-        
-        // Ajuste sin deformación
-        const videoAspect = vW / vH;
-        canvas.width = screenW;
-        canvas.height = screenW / videoAspect;
-
-        if (canvas.height > screenH) {
-            canvas.height = screenH;
-            canvas.width = screenH * videoAspect;
+        const aspect = video.videoWidth / video.videoHeight;
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerWidth / aspect;
+        if (canvas.height > window.innerHeight) {
+            canvas.height = window.innerHeight;
+            canvas.width = window.innerHeight * aspect;
         }
-        
-        const size = Math.min((canvas.width * 0.85) / 10, (canvas.height * 0.85) / 15);
-        gridParams = {
-            size: size,
-            startX: (canvas.width - (size * 10)) / 2,
-            startY: (canvas.height - (size * 15)) / 2,
-            inner: size * 0.9
-        };
+        // Ajustamos margen derecho para que quepa el texto de las filas
+        const size = Math.min((canvas.width * 0.70) / 10, (canvas.height * 0.85) / 15);
+        gridParams = { size, startX: (canvas.width * 0.05), startY: (canvas.height - (size * 15)) / 2, inner: size * 0.9 };
     }
 
-    // BUCLE DE RENDERIZADO (60 FPS)
     function drawLoop() {
-        if (!isPaused) {
-            renderBase(video);
-            requestAnimationFrame(drawLoop);
-        }
+        if (!isPaused) { render(video, ctx, canvas.width, canvas.height); requestAnimationFrame(drawLoop); }
     }
 
-    function renderBase(source) {
-        // Fondo blanco (Borra todo lo de fuera)
-        ctx.fillStyle = "#fff";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    function render(source, targetCtx, w, h) {
+        targetCtx.fillStyle = "#fff";
+        targetCtx.fillRect(0, 0, w, h);
+        const s = Math.min((w * 0.70) / 10, (h * 0.85) / 15);
+        const stX = w * 0.05;
+        const stY = (h - (s * 15)) / 2;
+        const inn = s * 0.9;
+
+        targetCtx.fillStyle = "#000";
+        targetCtx.font = `bold ${s/2.5}px Arial`;
         
-        const { size, startX, startY, inner } = gridParams;
+        // ID Foto arriba
+        if(photoID) {
+            targetCtx.textAlign = "left";
+            targetCtx.fillText("ID: " + photoID, stX, stY - (s/1.5));
+        }
 
-        // Etiquetas
-        ctx.fillStyle = "#000";
-        ctx.font = `bold ${size/3}px Arial`;
-        ctx.textAlign = "center";
-        for(let i=0; i<10; i++) ctx.fillText(10-i, startX + (i*size) + size/2, startY - 10);
-        ctx.textAlign = "right";
-        for(let j=0; j<15; j++) ctx.fillText(letras[14-j], startX - 10, startY + (j*size) + size/1.5);
+        // Eje X (Números)
+        targetCtx.textAlign = "center";
+        for(let i=0; i<10; i++) targetCtx.fillText(10-i, stX + (i*s) + s/2, stY - 10);
+        
+        // Eje Y (Letras y Nombres) al margen DERECHO
+        targetCtx.textAlign = "left";
+        targetCtx.textBaseline = "middle";
+        for(let j=0; j<15; j++) {
+            const letra = letras[14-j];
+            const nombreFila = rowNames[letra] || "";
+            const yPos = stY + (j*s) + s/2;
+            const xPos = stX + (10*s) + 15;
+            targetCtx.fillText(`${letra} - ${nombreFila}`, xPos, yPos);
+        }
+        targetCtx.textBaseline = "alphabetic";
 
-        // Dibujar celdas (Retícula)
         for (let i = 0; i < 10; i++) {
             for (let j = 0; j < 15; j++) {
-                const x = startX + (i * size) + (size - inner)/2;
-                const y = startY + (j * size) + (size - inner)/2;
-                
-                ctx.save();
-                drawRoundedRect(ctx, x, y, inner, inner, inner * 0.2);
-                ctx.clip();
-                // Solo dibujamos la porción correspondiente del video
-                ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
-                ctx.restore();
-
-                // Si hay scoring (estático), lo ponemos encima
+                const x = stX + (i * s) + (s - inn)/2;
+                const y = stY + (j * s) + (s - inn)/2;
+                targetCtx.save();
+                drawRoundedRect(targetCtx, x, y, inn, inn, inn * 0.2);
+                targetCtx.clip();
+                targetCtx.drawImage(source, 0, 0, w, h);
+                targetCtx.restore();
                 if (isPaused) {
-                    const scoreObj = currentScores.find(s => s.i === i && s.j === j);
-                    if (scoreObj) drawScoreUI(ctx, x, y, scoreObj.score, size);
+                    const scObj = currentScores.find(sc => sc.i === i && sc.j === j);
+                    if (scObj) drawScore(targetCtx, x, y, scObj.score, s);
                 }
             }
         }
@@ -173,162 +164,156 @@
 
     function captureStep() {
         captureTS = new Date().toLocaleString();
-        
-        // Congelar imagen
-        capturedFrame = document.createElement('canvas');
-        capturedFrame.width = canvas.width;
-        capturedFrame.height = canvas.height;
-        capturedFrame.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-        
+        rawVideoFrame = document.createElement('canvas');
+        rawVideoFrame.width = video.videoWidth;
+        rawVideoFrame.height = video.videoHeight;
+        rawVideoFrame.getContext('2d').drawImage(video, 0, 0);
         isPaused = true;
-        
-        // CALCULAR SCORING SOLO AQUÍ (UNA VEZ)
-        runHeavyCalculations();
-        renderBase(capturedFrame);
+        document.getElementById('capture-container').style.display = 'none';
+        calculate();
+        render(rawVideoFrame, ctx, canvas.width, canvas.height);
         document.getElementById('overlay-confirm').style.display = 'flex';
     }
 
-    function runHeavyCalculations() {
+    function calculate() {
         const { size, startX, startY, inner } = gridParams;
         currentScores = [];
-        const tCtx = capturedFrame.getContext('2d');
-
+        const tCtx = canvas.getContext('2d'); 
         for (let i = 0; i < 10; i++) {
             for (let j = 0; j < 15; j++) {
                 const x = Math.floor(startX + (i * size) + (size - inner)/2);
                 const y = Math.floor(startY + (j * size) + (size - inner)/2);
-                
                 const data = tCtx.getImageData(x, y, Math.floor(inner), Math.floor(inner)).data;
                 let hits = 0;
                 for (let k = 0; k < data.length; k += 4) {
-                    if (data[k+1] > data[k] * 1.1 && data[k+1] > data[k+2]) hits++;
+                    if (data[k+1] > data[k] * 1.15 && data[k+1] > data[k+2]) hits++;
                 }
                 const ratio = hits / (data.length / 4);
                 const score = ratio < 0.01 ? 1 : Math.min(10, Math.ceil(ratio * 20));
-                
                 currentScores.push({ i, j, col: 10-i, rowLet: letras[14-j], score, x, y });
             }
         }
+    }
+
+    function handleInput(el) {
+        const btnSame = document.getElementById('btn-same');
+        if(btnSame) btnSame.disabled = el.value.trim().length > 0;
     }
 
     function startEditMode() {
         isEditMode = true;
         document.getElementById('overlay-confirm').style.display = 'none';
         document.getElementById('msg-edit').style.display = 'block';
-        
         canvas.onclick = (e) => {
             const rect = canvas.getBoundingClientRect();
             const x = (e.clientX - rect.left) * (canvas.width / rect.width);
             const y = (e.clientY - rect.top) * (canvas.height / rect.height);
-            
             currentScores.forEach(s => {
                 if (x > s.x && x < s.x + gridParams.inner && y > s.y && y < s.y + gridParams.inner) {
                     s.score = s.score >= 5 ? 1 : 10;
-                    renderBase(capturedFrame);
+                    render(rawVideoFrame, ctx, canvas.width, canvas.height);
                 }
             });
         };
+        const btnEnd = document.createElement('button');
+        btnEnd.innerText = "FINALIZAR EDICIÓN"; btnEnd.className = "btn-success";
+        btnEnd.style.cssText = "position:absolute; bottom:15px; left:50%; transform:translateX(-50%); z-index:100;";
+        btnEnd.onclick = () => { btnEnd.remove(); isEditMode = false; canvas.onclick = null; document.getElementById('msg-edit').style.display = 'none'; startNamingFlow(); };
+        document.body.appendChild(btnEnd);
     }
 
-    // --- FLUJO DE NOMBRES ---
     function startNamingFlow() {
-        isEditMode = false;
-        canvas.onclick = null;
         document.getElementById('overlay-confirm').style.display = 'none';
-        document.getElementById('msg-edit').style.display = 'none';
         document.getElementById('overlay-naming').style.display = 'flex';
-        namingIdx = -1;
-        updateNamingUI();
+        namingIdx = -1; updateNamingUI();
     }
 
     function updateNamingUI() {
         const input = document.getElementById('nameInput');
         input.value = "";
+        const btnSame = document.getElementById('btn-same');
+        btnSame.disabled = false;
         if (namingIdx === -1) {
-            document.getElementById('naming-title').innerText = "NOMBRE DE LA FOTO";
-            document.getElementById('btn-same').style.display = "none";
+            document.getElementById('naming-title').innerText = "ID PROYECTO";
+            btnSame.style.display = "none";
             document.getElementById('btn-empty').style.display = "none";
         } else {
-            document.getElementById('naming-title').innerText = "NOMBRE FILA " + letras[namingIdx];
-            document.getElementById('btn-same').style.display = "inline-block";
+            document.getElementById('naming-title').innerText = "FILA " + letras[namingIdx];
+            btnSame.style.display = "inline-block";
             document.getElementById('btn-empty').style.display = "inline-block";
         }
         input.focus();
     }
 
-    function processNamingStep() {
-        const v = document.getElementById('nameInput').value.trim() || "S/N";
-        saveAndNext(v);
-    }
-    function nameSameAs() { saveAndNext(lastValue || "S/N"); }
-    function nameEmpty() { saveAndNext("VACIO"); }
+    function processNamingStep() { saveNext(document.getElementById('nameInput').value.trim() || "S/N"); }
+    function nameSameAs() { saveNext(lastValue || "S/N"); }
+    function nameEmpty() { saveNext("VACIO"); }
 
-    function saveAndNext(val) {
-        if (namingIdx === -1) photoID = val;
-        else {
-            rowNames[letras[namingIdx]] = val;
-            lastValue = val;
+    function saveNext(val) {
+        if (isExporting) return;
+        if (namingIdx === -1) {
+            photoID = val;
+        } else { 
+            rowNames[letras[namingIdx]] = val; 
+            lastValue = val; 
         }
+        // Redibujamos el canvas para ver el nombre en tiempo real a la derecha
+        render(rawVideoFrame, ctx, canvas.width, canvas.height);
+        
         namingIdx++;
         if (namingIdx < letras.length) updateNamingUI();
-        else finalExport();
+        else { isExporting = true; finalExport(); }
     }
 
     function finalExport() {
+        const buttons = document.querySelectorAll('#overlay-naming button');
+        buttons.forEach(b => b.disabled = true);
+        document.getElementById('naming-title').innerText = "GENERANDO ARCHIVOS...";
+        
         const exportTS = new Date().toLocaleString();
-        
-        // CSV: Nombre Foto, Nombre Fila, Columna, Scoring, TS Captura, TS Export
-        let csv = "Nombre de la Foto;Nombre de la fila;nº de la columna;scoring;timestamp captura;timestamp exporto\n";
-        
-        // Recorrer de A a O (Orden solicitado)
+        let csv = "ID Foto;Fila;Columna;Scoring;Captura;Exportacion\n";
         letras.forEach(L => {
-            const filaData = currentScores.filter(s => s.rowLet === L);
-            filaData.sort((a,b) => b.col - a.col); // 10 a 1
-            filaData.forEach(c => {
-                csv += `${photoID};${rowNames[L]};${c.col};${c.score};${captureTS};${exportTS}\n`;
-            });
+            const f = currentScores.filter(s => s.rowLet === L).sort((a,b) => b.col - a.col);
+            f.forEach(c => { csv += `${photoID};${rowNames[L] || "VACIO"};${c.col};${c.score};${captureTS};${exportTS}\n`; });
         });
-
-        // Descarga CSV
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = `${photoID}.csv`; a.click();
-
-        // Descarga JPG
-        const imgL = document.createElement('a');
-        imgL.download = `${photoID}.jpg`;
-        imgL.href = canvas.toDataURL('image/jpeg', 0.9);
-        imgL.click();
-
-        setTimeout(() => location.reload(), 1000);
+        const aCsv = document.createElement('a'); aCsv.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+        aCsv.download = `${photoID}.csv`; aCsv.click();
+        
+        const hdCanvas = document.createElement('canvas');
+        hdCanvas.width = video.videoWidth; hdCanvas.height = video.videoHeight;
+        render(rawVideoFrame, hdCanvas.getContext('2d'), hdCanvas.width, hdCanvas.height);
+        
+        const aImg = document.createElement('a'); aImg.download = `${photoID}_REPORT.jpg`;
+        aImg.href = hdCanvas.toDataURL('image/jpeg', 0.95); aImg.click();
+        
+        setTimeout(() => location.reload(), 2000);
     }
 
     function drawRoundedRect(c, x, y, w, h, r) {
-        c.beginPath();
-        c.moveTo(x+r, y); c.lineTo(x+w-r, y); c.quadraticCurveTo(x+w, y, x+w, y+r);
+        c.beginPath(); c.moveTo(x+r, y); c.lineTo(x+w-r, y); c.quadraticCurveTo(x+w, y, x+w, y+r);
         c.lineTo(x+w, y+h-r); c.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
         c.lineTo(x+r, y+h); c.quadraticCurveTo(x, y+h, x, y+h-r);
-        c.lineTo(x, y+r); c.quadraticCurveTo(x, y, x+r, y);
-        c.closePath();
+        c.lineTo(x, y+r); c.quadraticCurveTo(x, y, x+r, y); c.closePath();
     }
 
-    function drawScoreUI(c, x, y, score, size) {
-        const color = score <= 3 ? "#ff4d4d" : (score <= 7 ? "#ffff00" : "#00ff00");
+    function drawScore(c, x, y, score, size) {
+        c.save();
+        const rW = size * 0.45; const rH = size * 0.40;
+        const rX = x + 2; const rY = y + 2;
         c.fillStyle = "rgba(0,0,0,0.8)";
-        c.fillRect(x+2, y+2, size/2.2, size/2.2);
+        c.fillRect(rX, rY, rW, rH);
+        const color = score <= 3 ? "#ff4d4d" : (score <= 7 ? "#ffff00" : "#00ff00");
         c.fillStyle = color;
-        c.font = `bold ${size/2.8}px Arial`;
-        c.textAlign = "left";
-        c.fillText(score, x+5, y + size/2.8 + 2);
+        c.font = `bold ${size/3.0}px Arial`; 
+        c.textAlign = "center"; c.textBaseline = "middle";
+        c.fillText(score, rX + (rW/2), rY + (rH/2) + 1);
+        c.restore();
     }
 
     function toggleFS() {
         if (!document.fullscreenElement) document.documentElement.requestFullscreen();
         else document.exitFullscreen();
     }
-
-    window.onresize = resize;
 </script>
 </body>
 </html>
