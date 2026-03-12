@@ -336,18 +336,6 @@ function getScoreColor(score) {
     function uB() { const v = document.getElementById('cI').value; document.getElementById('bN').disabled = v === ""; document.getElementById('bM').disabled = v !== ""; }
     function sN(nxt) { colNames[LETTERS[namingIdx]] = nxt ? document.getElementById('cI').value : lastColName; lastColName = colNames[LETTERS[namingIdx]]; namingIdx++; if(namingIdx<COLS) setStep(6); else setStep(7); }
 
-    canvas.addEventListener('pointerdown', e => {
-        const r = canvas.getBoundingClientRect();
-        const mx = (e.clientX - r.left) * (1920/r.width), my = (e.clientY - r.top) * (1080/r.height);
-        if(appState === 2) {
-            const cp = getXY(pCenter.tx, pCenter.ty);
-            if(Math.hypot(cp.x-mx, cp.y-my) < 40) draggingIdx = 4;
-            else points.forEach((p,i) => { if(Math.hypot(p.x-mx, p.y-my) < 40) draggingIdx = i; });
-        } else if(appState === 4) {
-            const c = Math.floor((mx - 160) / ((1920-240)/COLS)), r = Math.floor((my - 100) / ((1080-180)/ROWS));
-            const s = cellScores.find(x => x.r === r && x.c === c); if(s) s.score = s.score === 10 ? 1 : 10;
-        }
-    });
 
     canvas.addEventListener('pointermove', e => {
         if(draggingIdx === null) return;
