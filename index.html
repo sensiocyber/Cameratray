@@ -1,30 +1,18 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Analizador Agrícola V9.2 - Control Total</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Analizador Agrícola V9.2 - Control Total</title>
+    <style>
+        * { box-sizing: border-box; touch-action: none; }
+        body { margin: 0; background: #111; font-family: sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; color: white; }
+        
+        #view-container { flex: 0 0 70%; position: relative; background: #000; display: flex; justify-content: center; align-items: center; }
+        canvas { max-width: 100%; max-height: 100%; object-fit: contain; }
+        video { position: absolute; width: 1px; height: 1px; opacity: 0; }
    <style>
     * { box-sizing: border-box; }
-    
-    #view-container { 
-    flex: 1; /* Permite que crezca dinámicamente */
-    position: relative; 
-    background: #000; 
-    overflow: hidden; /* Evita scrolls accidentales en fullscreen */
-    display: flex; 
-    justify-content: center; 
-    align-items: center;
-}
-
-canvas { 
-    /* Ajuste para que en pantalla completa no se deforme */
-    max-width: 100%; 
-    max-height: 100%; 
-    width: auto; 
-    height: auto;
-    object-fit: contain;
-}
     
     body { 
         margin: 0; 
@@ -36,8 +24,26 @@ canvas {
         overflow: hidden; 
         color: white; 
     }
+    
+    #view-container { 
+        flex: 0 0 65%; /* Reducido para dar más espacio al panel de abajo */
+        position: relative; 
+        background: #000; 
+        overflow: auto; /* Permite scroll si la imagen es grande */
+        display: flex; 
+        justify-content: center; 
+        align-items: center;
+        touch-action: pan-x pan-y; /* Habilita el scroll con los dedos */
+        -webkit-overflow-scrolling: touch;
+    }
 
-
+        #ui-panel { flex: 0 0 30%; background: #222; border-top: 4px solid #444; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px; z-index: 100; }
+        
+        .btn { padding: 15px; font-size: 16px; font-weight: bold; border-radius: 12px; border: none; width: 85%; max-width: 300px; margin: 4px; text-transform: uppercase; color: white; }
+        .btn-main { background: #2ecc71; box-shadow: 0 4px 0 #27ae60; }
+        .btn-alt { background: #3498db; box-shadow: 0 4px 0 #2980b9; }
+        .btn-danger { background: #e74c3c; box-shadow: 0 4px 0 #c0392b; }
+        .btn:disabled { opacity: 0.3; }
     canvas { 
         /* AJUSTE DE TAMAÑO: He bajado al 75% para que veas todo de un vistazo */
         width: 75%; 
@@ -107,271 +113,260 @@ canvas {
         border: 1px solid #555; 
         z-index: 1000;
     }
-</style>
 
+    </style>
 </head>
 <body>
 
 <div id="view-container">
-    <div id="step-label" class="step-info">PASO 1: ENCUADRE</div>
-    <button onclick="toggleFullScreen()" style="position: absolute; top: 10px; right: 10px; z-index: 1001; background: rgba(0,0,0,0.6); border: 1px solid #777; color: white; padding: 8px; border-radius: 8px; font-size: 12px;">
-        Fullscreen ⛶
-    </button>
-    <canvas id="mainCanvas"></canvas>
-    <video id="video" autoplay playsinline></video>
-</div>
-
-<div id="view-container">
-    <div id="step-label" class="step-info">PASO 1: ENCUADRE</div>
-    <canvas id="mainCanvas"></canvas>
-    <video id="video" autoplay playsinline></video>
+<div id="step-label" class="step-info">PASO 1: ENCUADRE</div>
+<canvas id="mainCanvas"></canvas>
+<video id="video" autoplay playsinline></video>
 </div>
 
 <div id="ui-panel"><div id="dynamic-buttons"></div></div>
 
 <script>
-    const canvas = document.getElementById('mainCanvas');
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    const video = document.getElementById('video');
-    const ui = document.getElementById('dynamic-buttons');
-    const stepLabel = document.getElementById('step-label');
+const canvas = document.getElementById('mainCanvas');
+const ctx = canvas.getContext('2d', { willReadFrequently: true });
+const video = document.getElementById('video');
+const ui = document.getElementById('dynamic-buttons');
+const stepLabel = document.getElementById('step-label');
 
-    let appState = 1; 
-    let capturedImg = null; 
-    let points = []; 
-    let pCenter = { tx: 0.5, ty: 0.5 }; // Centro relativo (0-1)
-    let draggingIdx = null; // 0-3 esquinas, 4 centro
-    
-    const COLS = 15; const ROWS = 10;
-    const LETTERS = "ABCDEFGHIJKLMNO".split("");
-    let cellScores = []; 
-    let trayID = "", colNames = {}, namingIdx = 0, lastColName = "", tsCapture = "";
+let appState = 1; 
+let capturedImg = null; 
+let points = []; 
+let pCenter = { tx: 0.5, ty: 0.5 }; // Centro relativo (0-1)
+let draggingIdx = null; // 0-3 esquinas, 4 centro
 
-    async function init() {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1920, height: 1080 } });
-            video.srcObject = stream;
-            video.onloadedmetadata = () => { canvas.width = 1920; canvas.height = 1080; setStep(1); requestAnimationFrame(draw); };
-        } catch (e) { alert("Error cámara"); }
-    }
+const COLS = 15; const ROWS = 10;
+const LETTERS = "ABCDEFGHIJKLMNO".split("");
+let cellScores = []; 
+let trayID = "", colNames = {}, namingIdx = 0, lastColName = "", tsCapture = "";
 
-    // MAPEO DE PERSPECTIVA (ESTIRAR)
-    function mapT(t, pivot) { return t * pivot / (t * pivot + (1 - t) * (1 - pivot)); }
-    function getXY(tx, ty) {
-        const ttx = mapT(tx, pCenter.tx);
-        const tty = mapT(ty, pCenter.ty);
-        const top = { x: points[0].x + (points[1].x - points[0].x) * ttx, y: points[0].y + (points[1].y - points[0].y) * ttx };
-        const bot = { x: points[3].x + (points[2].x - points[3].x) * ttx, y: points[3].y + (points[2].y - points[3].y) * ttx };
-        return { x: top.x + (bot.x - top.x) * tty, y: top.y + (bot.y - top.y) * tty };
-    }
-
-    function draw() {
-        ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-        if (appState === 1) {
-            ctx.drawImage(video, 0, 0);
-            ctx.strokeStyle = "#0f0"; ctx.lineWidth = 6;
-            ctx.strokeRect(canvas.width*0.2, canvas.height*0.2, canvas.width*0.6, canvas.height*0.6);
-        } else if (appState === 2) {
-            ctx.drawImage(capturedImg, 0, 0);
-            // Máscara 70% blanco
-            ctx.fillStyle = "rgba(255,255,255,0.7)";
-            ctx.beginPath(); ctx.rect(0, 0, canvas.width, canvas.height);
-            for(let r=0; r<ROWS; r++) {
-                for(let c=0; c<COLS; c++) {
-                    const p1 = getXY((c+0.1)/COLS, (r+0.1)/ROWS);
-                    const p2 = getXY((c+0.9)/COLS, (r+0.1)/ROWS);
-                    const p3 = getXY((c+0.9)/COLS, (r+0.9)/ROWS);
-                    const p4 = getXY((c+0.1)/COLS, (r+0.9)/ROWS);
-                    ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.lineTo(p3.x, p3.y); ctx.lineTo(p4.x, p4.y); ctx.closePath();
-                }
-            }
-            ctx.fill("evenodd");
-            // Puntos más pequeños (Radio 12px)
-            points.forEach(p => { ctx.fillStyle="#ff4444"; ctx.beginPath(); ctx.arc(p.x, p.y, 12, 0, 7); ctx.fill(); });
-            const cp = getXY(pCenter.tx, pCenter.ty);
-            ctx.fillStyle="#3498db"; ctx.beginPath(); ctx.arc(cp.x, cp.y, 12, 0, 7); ctx.fill();
-        } else {
-            renderFinal();
-        }
-        requestAnimationFrame(draw);
-    }
-
-    function renderFinal() {
-    const mL = 160, mT = 100, mB = 100;
-    const gW = canvas.width - mL - 80, gH = canvas.height - mT - mB;
-    const cW = gW / COLS, cH = gH / ROWS;
-
-    // Fondo blanco para el reporte
-    ctx.fillStyle = "#fff"; ctx.fillRect(0,0, canvas.width, canvas.height);
-
-    // Encabezado (ID y Fecha)
-    ctx.fillStyle = "#000"; ctx.font = "bold 35px Arial"; ctx.textAlign = "left";
-    ctx.fillText(`ID: ${trayID}`, mL, 60);
-    ctx.font = "20px Arial"; ctx.textAlign = "right";
-    ctx.fillText(`Captura: ${tsCapture}`, canvas.width - 80, 60);
-    
-    cellScores.forEach(s => {
-        const x = mL + s.c*cW, y = mT + s.r*cH;
-        const p = getXY((s.c+0.5)/COLS, (s.r+0.5)/ROWS); // Nota: 'r' debe ser s.r si no está definido en el loop
-        
-        // --- IMAGEN DE LA PLANTA (ZOOM LIMPIO) ---
-        const zoomSize = 70;
-        const offset = zoomSize / 2;
-        // Dibujamos la imagen en la parte superior del hueco
-        ctx.drawImage(capturedImg, 
-            p.x - offset, p.y - offset, zoomSize, zoomSize, 
-            x + 4, y + 4, cW - 8, cH - 28 // Dejamos 28px libres abajo
-        );
-
-        // --- BARRA DE DATOS INFERIOR (SCORING + NOMBRE) ---
-        const barH = 22; // Altura de la barra de datos
-        ctx.fillStyle = "rgba(0,0,0,0.6)"; 
-        ctx.fillRect(x + 4, y + cH - barH - 4, cW - 8, barH);
-
-        // 1. Scoring (A la izquierda de la barra)
-        const color = getScoreColor(s.score);
-        ctx.fillStyle = color;
-        ctx.font = "bold 16px Arial"; 
-        ctx.textAlign = "left";
-        ctx.textBaseline = "middle";
-        ctx.fillText(s.score, x + 10, y + cH - barH/2 - 4);
-
-        // 2. Nombre de Columna (A la derecha de la barra)
-        if(appState >= 6 && colNames[LETTERS[s.c]]) {
-            ctx.fillStyle = "#fff"; // Blanco para que contraste bien sobre el negro
-            ctx.font = "10px Arial";
-            ctx.textAlign = "right";
-            // Acortamos el nombre si es muy largo para que no pise al score
-            let name = colNames[LETTERS[s.c]];
-            if(name.length > 8) name = name.substring(0,7) + "..";
-            ctx.fillText(name, x + cW - 10, y + cH - barH/2 - 4);
-        }
-    });
-
-    // --- NOMENCLATURA DE EJES ---
-    ctx.fillStyle = "#333";
-    ctx.font = "bold 20px Arial";
-    ctx.textAlign = "center";
-    for(let c=0; c<COLS; c++) ctx.fillText(LETTERS[c], mL + (c+0.5)*cW, canvas.height - 40);
-    
-    ctx.textAlign = "right";
-    for(let r=0; r<ROWS; r++) ctx.fillText(r+1, mL - 25, mT + (r+0.5)*cH + 7);
+async function init() {
+try {
+const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1920, height: 1080 } });
+video.srcObject = stream;
+video.onloadedmetadata = () => { canvas.width = 1920; canvas.height = 1080; setStep(1); requestAnimationFrame(draw); };
+} catch (e) { alert("Error cámara"); }
 }
 
-    async function takePhoto() {
-        const tmp = document.createElement('canvas'); tmp.width = 1920; tmp.height = 1080;
-        tmp.getContext('2d').drawImage(video, 0, 0);
-        capturedImg = await createImageBitmap(tmp);
-        tsCapture = new Date().toLocaleString();
-        points = [{x:400, y:250}, {x:1520, y:250}, {x:1520, y:830}, {x:400, y:830}];
-        pCenter = { tx: 0.5, ty: 0.5 };
-        setStep(2);
-    }
+// MAPEO DE PERSPECTIVA (ESTIRAR)
+function mapT(t, pivot) { return t * pivot / (t * pivot + (1 - t) * (1 - pivot)); }
+function getXY(tx, ty) {
+const ttx = mapT(tx, pCenter.tx);
+const tty = mapT(ty, pCenter.ty);
+const top = { x: points[0].x + (points[1].x - points[0].x) * ttx, y: points[0].y + (points[1].y - points[0].y) * ttx };
+const bot = { x: points[3].x + (points[2].x - points[3].x) * ttx, y: points[3].y + (points[2].y - points[3].y) * ttx };
+return { x: top.x + (bot.x - top.x) * tty, y: top.y + (bot.y - top.y) * tty };
+}
+
+function draw() {
+ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+if (appState === 1) {
+ctx.drawImage(video, 0, 0);
+ctx.strokeStyle = "#0f0"; ctx.lineWidth = 6;
+ctx.strokeRect(canvas.width*0.2, canvas.height*0.2, canvas.width*0.6, canvas.height*0.6);
+} else if (appState === 2) {
+ctx.drawImage(capturedImg, 0, 0);
+// Máscara 70% blanco
+ctx.fillStyle = "rgba(255,255,255,0.7)";
+ctx.beginPath(); ctx.rect(0, 0, canvas.width, canvas.height);
+for(let r=0; r<ROWS; r++) {
+for(let c=0; c<COLS; c++) {
+const p1 = getXY((c+0.1)/COLS, (r+0.1)/ROWS);
+const p2 = getXY((c+0.9)/COLS, (r+0.1)/ROWS);
+const p3 = getXY((c+0.9)/COLS, (r+0.9)/ROWS);
+const p4 = getXY((c+0.1)/COLS, (r+0.9)/ROWS);
+ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.lineTo(p3.x, p3.y); ctx.lineTo(p4.x, p4.y); ctx.closePath();
+}
+}
+ctx.fill("evenodd");
+// Puntos más pequeños (Radio 12px)
+points.forEach(p => { ctx.fillStyle="#ff4444"; ctx.beginPath(); ctx.arc(p.x, p.y, 12, 0, 7); ctx.fill(); });
+const cp = getXY(pCenter.tx, pCenter.ty);
+ctx.fillStyle="#3498db"; ctx.beginPath(); ctx.arc(cp.x, cp.y, 12, 0, 7); ctx.fill();
+} else {
+renderFinal();
+}
+requestAnimationFrame(draw);
+}
+
+function renderFinal() {
+const mL = 160, mT = 100, mB = 100;
+const gW = canvas.width - mL - 80, gH = canvas.height - mT - mB;
+const cW = gW / COLS, cH = gH / ROWS;
+
+// Fondo blanco para el reporte
+ctx.fillStyle = "#fff"; ctx.fillRect(0,0, canvas.width, canvas.height);
+
+// Encabezado (ID y Fecha)
+ctx.fillStyle = "#000"; ctx.font = "bold 35px Arial"; ctx.textAlign = "left";
+ctx.fillText(`ID: ${trayID}`, mL, 60);
+ctx.font = "20px Arial"; ctx.textAlign = "right";
+ctx.fillText(`Captura: ${tsCapture}`, canvas.width - 80, 60);
+
+cellScores.forEach(s => {
+const x = mL + s.c*cW, y = mT + s.r*cH;
+const p = getXY((s.c+0.5)/COLS, (s.r+0.5)/ROWS); // Nota: 'r' debe ser s.r si no está definido en el loop
+
+// --- IMAGEN DE LA PLANTA (ZOOM LIMPIO) ---
+const zoomSize = 70;
+const offset = zoomSize / 2;
+// Dibujamos la imagen en la parte superior del hueco
+ctx.drawImage(capturedImg, 
+p.x - offset, p.y - offset, zoomSize, zoomSize, 
+x + 4, y + 4, cW - 8, cH - 28 // Dejamos 28px libres abajo
+);
+
+// --- BARRA DE DATOS INFERIOR (SCORING + NOMBRE) ---
+const barH = 22; // Altura de la barra de datos
+ctx.fillStyle = "rgba(0,0,0,0.6)"; 
+ctx.fillRect(x + 4, y + cH - barH - 4, cW - 8, barH);
+
+// 1. Scoring (A la izquierda de la barra)
+const color = getScoreColor(s.score);
+ctx.fillStyle = color;
+ctx.font = "bold 16px Arial"; 
+ctx.textAlign = "left";
+ctx.textBaseline = "middle";
+ctx.fillText(s.score, x + 10, y + cH - barH/2 - 4);
+
+// 2. Nombre de Columna (A la derecha de la barra)
+if(appState >= 6 && colNames[LETTERS[s.c]]) {
+ctx.fillStyle = "#fff"; // Blanco para que contraste bien sobre el negro
+ctx.font = "10px Arial";
+ctx.textAlign = "right";
+// Acortamos el nombre si es muy largo para que no pise al score
+let name = colNames[LETTERS[s.c]];
+if(name.length > 8) name = name.substring(0,7) + "..";
+ctx.fillText(name, x + cW - 10, y + cH - barH/2 - 4);
+}
+});
+
+// --- NOMENCLATURA DE EJES ---
+ctx.fillStyle = "#333";
+ctx.font = "bold 20px Arial";
+ctx.textAlign = "center";
+for(let c=0; c<COLS; c++) ctx.fillText(LETTERS[c], mL + (c+0.5)*cW, canvas.height - 40);
+
+ctx.textAlign = "right";
+for(let r=0; r<ROWS; r++) ctx.fillText(r+1, mL - 25, mT + (r+0.5)*cH + 7);
+}
+
+async function takePhoto() {
+const tmp = document.createElement('canvas'); tmp.width = 1920; tmp.height = 1080;
+tmp.getContext('2d').drawImage(video, 0, 0);
+capturedImg = await createImageBitmap(tmp);
+tsCapture = new Date().toLocaleString();
+points = [{x:400, y:250}, {x:1520, y:250}, {x:1520, y:830}, {x:400, y:830}];
+pCenter = { tx: 0.5, ty: 0.5 };
+setStep(2);
+}
 
 function getScoreColor(score) {
-    // 1-3: Tonos Rojos/Naranjas | 4-7: Amarillos/Ocres | 8-10: Verdes
-    const colors = [
-        "#e74c3c", "#e67e22", "#f1c40f", "#f39c12", "#dce775", 
-        "#aed581", "#81c784", "#4caf50", "#2ecc71", "#27ae60"
-    ];
-    return colors[score - 1] || "#fff";
-}
-    
-
-    function processAutoScoring() {
-    cellScores = [];
-    // Usamos un canvas auxiliar para leer los píxeles de la imagen capturada
-    const t = document.createElement('canvas'); 
-    t.width = 1920; t.height = 1080;
-    const tc = t.getContext('2d'); 
-    tc.drawImage(capturedImg, 0, 0);
-    
-    for(let r=0; r<ROWS; r++) {
-        for(let c=0; c<COLS; c++) {
-            // Definimos el área de la celda (un cuadrado alrededor del centro proyectado)
-            const p = getXY((c+0.5)/COLS, (r+0.5)/ROWS);
-            const scanSize = 100; // Tamaño del bloque a escanear por celda
-            const d = tc.getImageData(p.x - scanSize/2, p.y - scanSize/2, scanSize, scanSize).data;
-            
-            let greenCount = 0;
-            for(let i=0; i<d.length; i+=4) {
-                const r = d[i], g = d[i+1], b = d[i+2];
-                // Filtro de verdor: El verde debe ser mayor que el rojo y el azul
-                // y tener una intensidad mínima para descartar sombras oscuras
-                if(g > r * 1.1 && g > b * 1.1 && g > 40) {
-                    greenCount++;
-                }
-            }
-
-            // Calculamos el porcentaje de ocupación
-            const percent = greenCount / (scanSize * scanSize);
-            
-            // Mapeo a escala 1-10
-            // 0.4 (40% de la celda verde) suele ser un "10" visual en bandejas forestales/agrícolas
-            let score = Math.min(10, Math.max(1, Math.ceil(percent / 0.05 * 10)));
-            
-            cellScores.push({ r, c, score: score });
-        }
-    }
-    setStep(3);
+// 1-3: Tonos Rojos/Naranjas | 4-7: Amarillos/Ocres | 8-10: Verdes
+const colors = [
+"#e74c3c", "#e67e22", "#f1c40f", "#f39c12", "#dce775", 
+"#aed581", "#81c784", "#4caf50", "#2ecc71", "#27ae60"
+];
+return colors[score - 1] || "#fff";
 }
 
-    function setStep(step) {
-        appState = step; ui.innerHTML = "";
-        stepLabel.innerText = "PASO " + Math.floor(step);
-        if(step===1) ui.innerHTML = `<button class="btn btn-main" onclick="takePhoto()">TOMAR FOTO</button>`;
-        if(step===2) ui.innerHTML = `<button class="btn btn-main" onclick="processAutoScoring()">CONFIRMAR REJILLA</button>`;
-        if(step===3) ui.innerHTML = `<button class="btn btn-alt" onclick="setStep(4)">CORREGIR SCORING</button>`;
-        if(step===4) ui.innerHTML = `<button class="btn btn-main" onclick="setStep(5)">ACEPTAR CORRECCIÓN</button>`;
-        if(step===5) ui.innerHTML = `<input type="text" id="tI" placeholder="ID BANDEJA"><button class="btn btn-main" onclick="trayID=document.getElementById('tI').value; if(trayID)setStep(6)">ACEPTAR</button>`;
-        if(step===6) {
-            const L = LETTERS[namingIdx];
-            ui.innerHTML = `<input type="text" id="cI" placeholder="COLUMNA ${L}" oninput="uB()">
-                <div style="display:flex;gap:5px;"><button id="bN" class="btn btn-main" onclick="sN(true)" disabled>SIGUIENTE</button>
-                <button id="bM" class="btn btn-alt" onclick="sN(false)">MISMO</button></div>`;
-        }
-        if(step===7) ui.innerHTML = `<button class="btn btn-main" onclick="exportData()">CORRECTO (DESCARGAR)</button><button class="btn btn-danger" onclick="namingIdx=0;setStep(6)">REPETIR</button>`;
-    }
 
-    function uB() { const v = document.getElementById('cI').value; document.getElementById('bN').disabled = v === ""; document.getElementById('bM').disabled = v !== ""; }
-    function sN(nxt) { colNames[LETTERS[namingIdx]] = nxt ? document.getElementById('cI').value : lastColName; lastColName = colNames[LETTERS[namingIdx]]; namingIdx++; if(namingIdx<COLS) setStep(6); else setStep(7); }
+function processAutoScoring() {
+cellScores = [];
+// Usamos un canvas auxiliar para leer los píxeles de la imagen capturada
+const t = document.createElement('canvas'); 
+t.width = 1920; t.height = 1080;
+const tc = t.getContext('2d'); 
+tc.drawImage(capturedImg, 0, 0);
 
+for(let r=0; r<ROWS; r++) {
+for(let c=0; c<COLS; c++) {
+// Definimos el área de la celda (un cuadrado alrededor del centro proyectado)
+const p = getXY((c+0.5)/COLS, (r+0.5)/ROWS);
+const scanSize = 100; // Tamaño del bloque a escanear por celda
+const d = tc.getImageData(p.x - scanSize/2, p.y - scanSize/2, scanSize, scanSize).data;
 
-    canvas.addEventListener('pointermove', e => {
-        if(draggingIdx === null) return;
-        const r = canvas.getBoundingClientRect();
-        const mx = (e.clientX - r.left) * (1920/r.width), my = (e.clientY - r.top) * (1080/r.height);
-        if(draggingIdx === 4) {
-            // Cálculo inverso para mover el punto azul (Pivot Perspectiva)
-            pCenter.tx = Math.max(0.1, Math.min(0.9, mx/1920));
-            pCenter.ty = Math.max(0.1, Math.min(0.9, my/1080));
-        } else { points[draggingIdx].x = mx; points[draggingIdx].y = my; }
-    });
-    canvas.addEventListener('pointerup', () => draggingIdx = null);
-
-    function toggleFullScreen() {
-    if (!document.fullscreenElement) {
-        // Entrar en pantalla completa
-        document.documentElement.requestFullscreen().catch(err => {
-            alert(`Error al intentar modo pantalla completa: ${err.message}`);
-        });
-    } else {
-        // Salir de pantalla completa
-        if (document.exitFullscreen) {
-            document.exitFullscreen();
-        }
-    }
+let greenCount = 0;
+for(let i=0; i<d.length; i+=4) {
+const r = d[i], g = d[i+1], b = d[i+2];
+// Filtro de verdor: El verde debe ser mayor que el rojo y el azul
+// y tener una intensidad mínima para descartar sombras oscuras
+if(g > r * 1.1 && g > b * 1.1 && g > 40) {
+greenCount++;
 }
-    
-    function exportData() {
-        let csv = "ID;Col;Fila;Score;TS\n";
-        cellScores.forEach(s => csv += `${trayID};${colNames[LETTERS[s.c]]};${s.r+1};${s.score};${tsCapture}\n`);
-        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'})); a.download = `${trayID}.csv`; a.click();
-        const i = document.createElement('a'); i.href = canvas.toDataURL('image/jpeg', 0.8); i.download = `${trayID}.jpg`; i.click();
-        ui.innerHTML = `<button class="btn btn-main" onclick="location.reload()">¿OTRA FOTO?</button>`;
-    }
+}
 
-    init();
+// Calculamos el porcentaje de ocupación
+const percent = greenCount / (scanSize * scanSize);
+
+// Mapeo a escala 1-10
+// 0.4 (40% de la celda verde) suele ser un "10" visual en bandejas forestales/agrícolas
+let score = Math.min(10, Math.max(1, Math.ceil(percent / 0.05 * 10)));
+
+cellScores.push({ r, c, score: score });
+}
+}
+setStep(3);
+}
+
+function setStep(step) {
+appState = step; ui.innerHTML = "";
+stepLabel.innerText = "PASO " + Math.floor(step);
+if(step===1) ui.innerHTML = `<button class="btn btn-main" onclick="takePhoto()">TOMAR FOTO</button>`;
+if(step===2) ui.innerHTML = `<button class="btn btn-main" onclick="processAutoScoring()">CONFIRMAR REJILLA</button>`;
+if(step===3) ui.innerHTML = `<button class="btn btn-alt" onclick="setStep(4)">CORREGIR SCORING</button>`;
+if(step===4) ui.innerHTML = `<button class="btn btn-main" onclick="setStep(5)">ACEPTAR CORRECCIÓN</button>`;
+if(step===5) ui.innerHTML = `<input type="text" id="tI" placeholder="ID BANDEJA"><button class="btn btn-main" onclick="trayID=document.getElementById('tI').value; if(trayID)setStep(6)">ACEPTAR</button>`;
+if(step===6) {
+const L = LETTERS[namingIdx];
+ui.innerHTML = `<input type="text" id="cI" placeholder="COLUMNA ${L}" oninput="uB()">
+               <div style="display:flex;gap:5px;"><button id="bN" class="btn btn-main" onclick="sN(true)" disabled>SIGUIENTE</button>
+               <button id="bM" class="btn btn-alt" onclick="sN(false)">MISMO</button></div>`;
+}
+if(step===7) ui.innerHTML = `<button class="btn btn-main" onclick="exportData()">CORRECTO (DESCARGAR)</button><button class="btn btn-danger" onclick="namingIdx=0;setStep(6)">REPETIR</button>`;
+}
+
+function uB() { const v = document.getElementById('cI').value; document.getElementById('bN').disabled = v === ""; document.getElementById('bM').disabled = v !== ""; }
+function sN(nxt) { colNames[LETTERS[namingIdx]] = nxt ? document.getElementById('cI').value : lastColName; lastColName = colNames[LETTERS[namingIdx]]; namingIdx++; if(namingIdx<COLS) setStep(6); else setStep(7); }
+
+canvas.addEventListener('pointerdown', e => {
+const r = canvas.getBoundingClientRect();
+const mx = (e.clientX - r.left) * (1920/r.width), my = (e.clientY - r.top) * (1080/r.height);
+if(appState === 2) {
+const cp = getXY(pCenter.tx, pCenter.ty);
+if(Math.hypot(cp.x-mx, cp.y-my) < 40) draggingIdx = 4;
+else points.forEach((p,i) => { if(Math.hypot(p.x-mx, p.y-my) < 40) draggingIdx = i; });
+} else if(appState === 4) {
+const c = Math.floor((mx - 160) / ((1920-240)/COLS)), r = Math.floor((my - 100) / ((1080-180)/ROWS));
+const s = cellScores.find(x => x.r === r && x.c === c); if(s) s.score = s.score === 10 ? 1 : 10;
+}
+});
+
+canvas.addEventListener('pointermove', e => {
+if(draggingIdx === null) return;
+const r = canvas.getBoundingClientRect();
+const mx = (e.clientX - r.left) * (1920/r.width), my = (e.clientY - r.top) * (1080/r.height);
+if(draggingIdx === 4) {
+// Cálculo inverso para mover el punto azul (Pivot Perspectiva)
+pCenter.tx = Math.max(0.1, Math.min(0.9, mx/1920));
+pCenter.ty = Math.max(0.1, Math.min(0.9, my/1080));
+} else { points[draggingIdx].x = mx; points[draggingIdx].y = my; }
+});
+canvas.addEventListener('pointerup', () => draggingIdx = null);
+
+function exportData() {
+let csv = "ID;Col;Fila;Score;TS\n";
+cellScores.forEach(s => csv += `${trayID};${colNames[LETTERS[s.c]]};${s.r+1};${s.score};${tsCapture}\n`);
+const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'})); a.download = `${trayID}.csv`; a.click();
+const i = document.createElement('a'); i.href = canvas.toDataURL('image/jpeg', 0.8); i.download = `${trayID}.jpg`; i.click();
+ui.innerHTML = `<button class="btn btn-main" onclick="location.reload()">¿OTRA FOTO?</button>`;
+}
+
+init();
 </script>
 </body>
 </html>
