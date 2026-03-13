@@ -71,7 +71,7 @@
     }
     
     .btn { 
-        padding: 12px; 
+        padding: 10px; 
         font-size: 15px; 
         font-weight: bold; 
         border-radius: 10px; 
@@ -212,7 +212,7 @@ const x = mL + s.c*cW, y = mT + s.r*cH;
 const p = getXY((s.c+0.5)/COLS, (s.r+0.5)/ROWS); // Nota: 'r' debe ser s.r si no está definido en el loop
 
 // --- IMAGEN DE LA PLANTA (ZOOM LIMPIO) ---
-const zoomSize = 70;
+const zoomSize = 45;
 const offset = zoomSize / 2;
 // Dibujamos la imagen en la parte superior del hueco
 ctx.drawImage(capturedImg, 
@@ -228,7 +228,7 @@ ctx.fillRect(x + 4, y + cH - barH - 4, cW - 8, barH);
 // 1. Scoring (A la izquierda de la barra)
 const color = getScoreColor(s.score);
 ctx.fillStyle = color;
-ctx.font = "bold 16px Arial"; 
+ctx.font = "bold 18px Arial"; 
 ctx.textAlign = "left";
 ctx.textBaseline = "middle";
 ctx.fillText(s.score, x + 10, y + cH - barH/2 - 4);
@@ -236,7 +236,7 @@ ctx.fillText(s.score, x + 10, y + cH - barH/2 - 4);
 // 2. Nombre de Columna (A la derecha de la barra)
 if(appState >= 6 && colNames[LETTERS[s.c]]) {
 ctx.fillStyle = "#fff"; // Blanco para que contraste bien sobre el negro
-ctx.font = "10px Arial";
+ctx.font = "15px Arial";
 ctx.textAlign = "right";
 // Acortamos el nombre si es muy largo para que no pise al score
 let name = colNames[LETTERS[s.c]];
