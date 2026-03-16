@@ -27,6 +27,7 @@
         flex: 0 0 180px; background: #222; border-left: 3px solid #444; 
         display: flex; flex-direction: column; align-items: center; 
         padding: 10px; z-index: 100; overflow-y: auto; 
+        
     }
     .btn { 
         padding: 12px 5px; font-size: 13px; font-weight: bold; 
@@ -326,15 +327,62 @@ canvas.addEventListener('pointermove', e => {
 canvas.addEventListener('pointerup', () => draggingIdx = null);
 
 function updateFinalUI() {
+    // 1. Agrupar datos por nombre de columna
+    const totals = {};
+
+    LETTERS.forEach((letter, index) => {
+        const name = colNames[letter] || `Col ${letter}`;
+        
+        // Si el nombre no existe en nuestro objeto de totales, lo creamos
+        if (!totals[name]) {
+            totals[name] = { high: 0, low: 0 };
+        }
+
+        // Filtramos las celdas que pertenecen a esta columna física (index)
+        const cells = cellScores.filter(s => s.c === index);
+        
+        // Sumamos al total del grupo (nombre)
+        totals[name].high += cells.filter(s => s.score >= 5).length;
+        totals[name].low += cells.filter(s => s.score < 5).length;
+    });
+
+    // 2. Generar el HTML de la tabla de resumen
+    let statsHtml = `
+        <div style="width:95%; background:#333; border-radius:8px; padding:10px; margin-bottom:15px; border:1px solid #444;">
+            <h4 style="margin:0 0 8px 0; color:#2ecc71; text-align:center; font-size:13px; text-transform:uppercase;">Resumen por Lote</h4>
+            <table style="width:100%; border-collapse:collapse; font-size:12px; text-align:center;">
+                <thead>
+                    <tr style="border-bottom:1px solid #555; color:#aaa;">
+                        <th style="text-align:left; padding-bottom:5px;">Nombre</th>
+                        <th style="color:#2ecc71;">≥5</th>
+                        <th style="color:#e74c3c;"><5</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+    // Recorremos el objeto de totales para llenar la tabla
+    for (const name in totals) {
+        statsHtml += `
+            <tr style="border-bottom:1px solid #444;">
+                <td style="text-align:left; padding:6px 0; font-weight:bold; color:#3498db;">${name}</td>
+                <td style="color:#2ecc71; font-weight:bold;">${totals[name].high}</td>
+                <td style="color:#e74c3c; font-weight:bold;">${totals[name].low}</td>
+            </tr>`;
+    }
+
+    statsHtml += `</tbody></table></div>`;
+
+    // 3. Renderizar en el panel
     let html = `
         <div style="display:flex; flex-direction:column; width:100%; align-items:center;">
+            ${statsHtml}
             <button class="btn btn-main" onclick="downloadCSV()">DESCARGAR CSV</button>
             <button class="btn btn-alt" onclick="downloadImage()">DESCARGAR IMAGEN</button>
             <button class="btn btn-danger" style="margin-top:10px;" onclick="namingIdx=0;setStep(6)">REPETIR NOMBRES</button>
     `;
 
     if (csvDownloaded && imgDownloaded) {
-        html += `<button class="btn" style="background:#f39c12; margin-top:20px;" onclick="location.reload()">+ NUEVA CAPTURA</button>`;
+        html += `<button class="btn" style="background:#f39c12; margin-top:20px; border:2px solid white;" onclick="location.reload()">+ NUEVA CAPTURA</button>`;
     }
 
     html += `</div>`;
