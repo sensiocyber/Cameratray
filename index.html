@@ -5,129 +5,47 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Analizador Agrícola V9.2 - Control Total</title>
     <style>
-        * { box-sizing: border-box; touch-action: none; }
-        body { margin: 0; background: #111; font-family: sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; color: white; }
-        
-        #view-container { flex: 0 0 80%; position: relative; background: #000; display: flex; justify-content: center; align-items: center; }
-        canvas { max-width: 100%; max-height: 100%; object-fit: contain; }
-        video { position: absolute; width: 1px; height: 1px; opacity: 0; }
-   <style>
-    * { box-sizing: border-box; }
-    
+       * { box-sizing: border-box; touch-action: none; }
     body { 
-    margin: 0; 
-    background: #111; 
-    font-family: sans-serif; 
-    height: 100vh; /* Cambiado a 100vh para ocupar toda la pantalla */
-    display: flex; 
-    flex-direction: row; /* CAMBIO: De arriba-abajo a izquierda-derecha */
-    overflow: hidden; 
-    color: white; 
-}
-
-#view-container { 
-    flex: 1; /* CAMBIO: Toma todo el espacio restante a la izquierda */
-    position: relative; 
-    background: #000; 
-    display: flex; 
-    justify-content: center; 
-    align-items: center;
-    overflow: hidden;
-}
-
-#ui-panel { 
-    flex: 0 0 180px; /* Aquí ajustas el ancho (antes 250px) */
-    background: #222; 
-    border-left: 3px solid #444; 
-    display: flex; 
-    flex-direction: column; 
-    align-items: center; 
-    padding: 10px 5px; 
-    z-index: 100; 
-    overflow-y: auto; 
-}
-
-.btn { 
-    padding: 15px 5px; /* Reducimos padding lateral para que el texto quepa */
-    font-size: 13px;   /* Bajamos un punto el tamaño para el panel estrecho */
-    font-weight: bold; 
-    border-radius: 10px; 
-    border: none; 
-    width: 90%; 
-    margin: 10px 0; 
-    text-transform: uppercase; 
-    color: white; 
-}
+        margin: 0; background: #111; font-family: sans-serif; 
+        height: 100vh; display: flex; flex-direction: row; 
+        overflow: hidden; color: white; 
+    }
+    #view-container { 
+        flex: 1; position: relative; background: #000; 
+        display: flex; justify-content: center; align-items: center; 
+    }
     canvas { 
-        /* AJUSTE DE TAMAÑO: He bajado al 75% para que veas todo de un vistazo */
-        width: 100%; 
-        height: 100%; 
-        max-width: none; 
-        max-height: none; 
-        display: block;
-        image-rendering: auto; 
-        border: 1px solid #333;
+        max-width: 100%; max-height: 100%; 
+        touch-action: none; /* Esto evita que el navegador intente hacer scroll al tocar el canvas */
+        cursor: crosshair;
+        object-fit: contain; display: block; 
+        image-rendering: auto; border: 1px solid #333; 
     }
-
     video { position: absolute; width: 1px; height: 1px; opacity: 0; }
-
     #ui-panel { 
-        flex: 0 0 25%; /* Aumentado para que los botones y el input quepan sin cortarse */
-        background: #222; 
-        border-top: 3px solid #444; 
-        display: flex; 
-        flex-direction: column; 
-        align-items: center; 
-        justify-content: flex-start; /* Alinea botones al principio del panel */
-        padding: 10px; 
-        z-index: 100; 
-        overflow-y: auto; /* Por si los botones son muchos, permite scroll en el panel */
+        flex: 0 0 180px; background: #222; border-left: 3px solid #444; 
+        display: flex; flex-direction: column; align-items: center; 
+        padding: 10px; z-index: 100; overflow-y: auto; 
     }
-    
     .btn { 
-        padding: 10px; 
-        font-size: 15px; 
-        font-weight: bold; 
-        border-radius: 10px; 
-        border: none; 
-        width: 90%; 
-        max-width: 280px; 
-        margin: 4px 0; 
-        text-transform: uppercase; 
-        color: white; 
-        flex-shrink: 0; /* Evita que los botones se aplasten */
+        padding: 12px 5px; font-size: 13px; font-weight: bold; 
+        border-radius: 10px; border: none; width: 95%; 
+        margin: 8px 0; text-transform: uppercase; color: white; cursor: pointer;
     }
-
     .btn-main { background: #2ecc71; box-shadow: 0 3px 0 #27ae60; }
     .btn-alt { background: #3498db; box-shadow: 0 3px 0 #2980b9; }
     .btn-danger { background: #e74c3c; box-shadow: 0 3px 0 #c0392b; }
-    .btn:active { transform: translateY(2px); box-shadow: none; }
-
     input { 
-        width: 90%; 
-        max-width: 280px;
-        padding: 10px; 
-        font-size: 16px; 
-        border-radius: 8px; 
-        border: 2px solid #555; 
-        background: #333; 
-        color: white; 
-        margin-bottom: 8px; 
-        text-align: center; 
+        width: 95%; padding: 10px; font-size: 16px; border-radius: 8px; 
+        border: 2px solid #555; background: #333; color: white; 
+        margin-bottom: 8px; text-align: center; 
     }
-
     .step-info { 
-        position: fixed; 
-        top: 10px; 
-        left: 10px; 
-        background: rgba(0,0,0,0.8); 
-        padding: 5px 15px; 
-        border-radius: 20px; 
-        font-size: 11px; 
-        border: 1px solid #555; 
-        z-index: 1000;
+        position: fixed; top: 10px; left: 10px; 
+        background: rgba(0,0,0,0.8); padding: 5px 15px; 
+        border-radius: 20px; font-size: 11px; border: 1px solid #555; z-index: 1000; 
     }
-
     </style>
 </head>
 <body>
@@ -303,7 +221,7 @@ for(let r=0; r<ROWS; r++) {
 for(let c=0; c<COLS; c++) {
 // Definimos el área de la celda (un cuadrado alrededor del centro proyectado)
 const p = getXY((c+0.5)/COLS, (r+0.5)/ROWS);
-const scanSize = 100; // Tamaño del bloque a escanear por celda
+const scanSize = 70; // Tamaño del bloque a escanear por celda
 const d = tc.getImageData(p.x - scanSize/2, p.y - scanSize/2, scanSize, scanSize).data;
 
 let greenCount = 0;
@@ -356,27 +274,54 @@ function uB() { const v = document.getElementById('cI').value; document.getEleme
 function sN(nxt) { colNames[LETTERS[namingIdx]] = nxt ? document.getElementById('cI').value : lastColName; lastColName = colNames[LETTERS[namingIdx]]; namingIdx++; if(namingIdx<COLS) setStep(6); else setStep(7); }
 
 canvas.addEventListener('pointerdown', e => {
-const r = canvas.getBoundingClientRect();
-const mx = (e.clientX - r.left) * (1920/r.width), my = (e.clientY - r.top) * (1080/r.height);
-if(appState === 2) {
-const cp = getXY(pCenter.tx, pCenter.ty);
-if(Math.hypot(cp.x-mx, cp.y-my) < 40) draggingIdx = 4;
-else points.forEach((p,i) => { if(Math.hypot(p.x-mx, p.y-my) < 40) draggingIdx = i; });
-} else if(appState === 4) {
-const c = Math.floor((mx - 160) / ((1920-240)/COLS)), r = Math.floor((my - 100) / ((1080-180)/ROWS));
-const s = cellScores.find(x => x.r === r && x.c === c); if(s) s.score = s.score === 10 ? 1 : 10;
-}
+    const rect = canvas.getBoundingClientRect();
+    
+    // Calculamos la escala real entre los píxeles del canvas (1920) y los píxeles de la pantalla
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    // Coordenadas exactas relativas al lienzo
+    const mx = (e.clientX - rect.left) * scaleX;
+    const my = (e.clientY - rect.top) * scaleY;
+
+    if(appState === 2) {
+        // Aumentamos el radio de detección a 60 para facilitar el toque
+        const cp = getXY(pCenter.tx, pCenter.ty);
+        if(Math.hypot(cp.x - mx, cp.y - my) < 60) {
+            draggingIdx = 4;
+        } else {
+            points.forEach((p, i) => { 
+                if(Math.hypot(p.x - mx, p.y - my) < 60) draggingIdx = i; 
+            });
+        }
+    } else if(appState === 4) {
+        const gridW = (1920 - 240);
+        const gridH = (1080 - 180);
+        const c = Math.floor((mx - 160) / (gridW / COLS));
+        const rIdx = Math.floor((my - 100) / (gridH / ROWS));
+        const s = cellScores.find(x => x.r === rIdx && x.c === c); 
+        if(s) s.score = s.score === 10 ? 1 : 10;
+    }
 });
 
 canvas.addEventListener('pointermove', e => {
-if(draggingIdx === null) return;
-const r = canvas.getBoundingClientRect();
-const mx = (e.clientX - r.left) * (1920/r.width), my = (e.clientY - r.top) * (1080/r.height);
-if(draggingIdx === 4) {
-// Cálculo inverso para mover el punto azul (Pivot Perspectiva)
-pCenter.tx = Math.max(0.1, Math.min(0.9, mx/1920));
-pCenter.ty = Math.max(0.1, Math.min(0.9, my/1080));
-} else { points[draggingIdx].x = mx; points[draggingIdx].y = my; }
+    if(draggingIdx === null) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    const mx = (e.clientX - rect.left) * scaleX;
+    const my = (e.clientY - rect.top) * scaleY;
+    
+    if(draggingIdx === 4) {
+        pCenter.tx = Math.max(0.05, Math.min(0.95, mx / 1920));
+        pCenter.ty = Math.max(0.05, Math.min(0.95, my / 1080));
+    } else { 
+        // Limitamos para que no se salgan del canvas
+        points[draggingIdx].x = Math.max(0, Math.min(1920, mx)); 
+        points[draggingIdx].y = Math.max(0, Math.min(1080, my)); 
+    }
 });
 canvas.addEventListener('pointerup', () => draggingIdx = null);
 
