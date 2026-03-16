@@ -8,46 +8,60 @@
         * { box-sizing: border-box; touch-action: none; }
         body { margin: 0; background: #111; font-family: sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; color: white; }
         
-        #view-container { flex: 0 0 70%; position: relative; background: #000; display: flex; justify-content: center; align-items: center; }
+        #view-container { flex: 0 0 80%; position: relative; background: #000; display: flex; justify-content: center; align-items: center; }
         canvas { max-width: 100%; max-height: 100%; object-fit: contain; }
         video { position: absolute; width: 1px; height: 1px; opacity: 0; }
    <style>
     * { box-sizing: border-box; }
     
     body { 
-        margin: 0; 
-        background: #111; 
-        font-family: sans-serif; 
-        height: 85vh; 
-        display: flex; 
-        flex-direction: column; 
-        overflow: hidden; 
-        color: white; 
-    }
-    
-    #view-container { 
-        flex: 0 0 87%; /* Reducido para dar más espacio al panel de abajo */
-        position: relative; 
-        background: #000; 
-        overflow: auto; /* Permite scroll si la imagen es grande */
-        display: flex; 
-        justify-content: center; 
-        align-items: center;
-        touch-action: pan-x pan-y; /* Habilita el scroll con los dedos */
-        -webkit-overflow-scrolling: touch;
-    }
+    margin: 0; 
+    background: #111; 
+    font-family: sans-serif; 
+    height: 100vh; /* Cambiado a 100vh para ocupar toda la pantalla */
+    display: flex; 
+    flex-direction: row; /* CAMBIO: De arriba-abajo a izquierda-derecha */
+    overflow: hidden; 
+    color: white; 
+}
 
-        #ui-panel { flex: 0 0 30%; background: #222; border-top: 4px solid #444; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px; z-index: 100; }
-        
-        .btn { padding: 15px; font-size: 16px; font-weight: bold; border-radius: 12px; border: none; width: 85%; max-width: 300px; margin: 4px; text-transform: uppercase; color: white; }
-        .btn-main { background: #2ecc71; box-shadow: 0 4px 0 #27ae60; }
-        .btn-alt { background: #3498db; box-shadow: 0 4px 0 #2980b9; }
-        .btn-danger { background: #e74c3c; box-shadow: 0 4px 0 #c0392b; }
-        .btn:disabled { opacity: 0.3; }
+#view-container { 
+    flex: 1; /* CAMBIO: Toma todo el espacio restante a la izquierda */
+    position: relative; 
+    background: #000; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center;
+    overflow: hidden;
+}
+
+#ui-panel { 
+    flex: 0 0 180px; /* Aquí ajustas el ancho (antes 250px) */
+    background: #222; 
+    border-left: 3px solid #444; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    padding: 10px 5px; 
+    z-index: 100; 
+    overflow-y: auto; 
+}
+
+.btn { 
+    padding: 15px 5px; /* Reducimos padding lateral para que el texto quepa */
+    font-size: 13px;   /* Bajamos un punto el tamaño para el panel estrecho */
+    font-weight: bold; 
+    border-radius: 10px; 
+    border: none; 
+    width: 90%; 
+    margin: 10px 0; 
+    text-transform: uppercase; 
+    color: white; 
+}
     canvas { 
         /* AJUSTE DE TAMAÑO: He bajado al 75% para que veas todo de un vistazo */
-        width: 75%; 
-        height: auto; 
+        width: 100%; 
+        height: 100%; 
         max-width: none; 
         max-height: none; 
         display: block;
@@ -58,7 +72,7 @@
     video { position: absolute; width: 1px; height: 1px; opacity: 0; }
 
     #ui-panel { 
-        flex: 0 0 35%; /* Aumentado para que los botones y el input quepan sin cortarse */
+        flex: 0 0 25%; /* Aumentado para que los botones y el input quepan sin cortarse */
         background: #222; 
         border-top: 3px solid #444; 
         display: flex; 
@@ -138,6 +152,8 @@ let capturedImg = null;
 let points = []; 
 let pCenter = { tx: 0.5, ty: 0.5 }; // Centro relativo (0-1)
 let draggingIdx = null; // 0-3 esquinas, 4 centro
+let csvDownloaded = false;
+let imgDownloaded = false;
 
 const COLS = 15; const ROWS = 10;
 const LETTERS = "ABCDEFGHIJKLMNO".split("");
@@ -322,12 +338,18 @@ if(step===3) ui.innerHTML = `<button class="btn btn-alt" onclick="setStep(4)">CO
 if(step===4) ui.innerHTML = `<button class="btn btn-main" onclick="setStep(5)">ACEPTAR CORRECCIÓN</button>`;
 if(step===5) ui.innerHTML = `<input type="text" id="tI" placeholder="ID BANDEJA"><button class="btn btn-main" onclick="trayID=document.getElementById('tI').value; if(trayID)setStep(6)">ACEPTAR</button>`;
 if(step===6) {
-const L = LETTERS[namingIdx];
-ui.innerHTML = `<input type="text" id="cI" placeholder="COLUMNA ${L}" oninput="uB()">
-               <div style="display:flex;gap:5px;"><button id="bN" class="btn btn-main" onclick="sN(true)" disabled>SIGUIENTE</button>
-               <button id="bM" class="btn btn-alt" onclick="sN(false)">MISMO</button></div>`;
+    const L = LETTERS[namingIdx];
+    ui.innerHTML = `
+        <p style="margin-bottom:10px; color:#aaa;">COLUMNA ${L}</p>
+        <input type="text" id="cI" placeholder="NOMBRE..." oninput="uB()">
+        <div style="display:flex; flex-direction:column; width:100%; align-items:center; gap:15px; margin-top:10px;">
+            <button id="bN" class="btn btn-main" onclick="sN(true)" disabled>SIGUIENTE</button>
+            <button id="bM" class="btn btn-alt" onclick="sN(false)">MISMO QUE ANTERIOR</button>
+        </div>`;
 }
-if(step===7) ui.innerHTML = `<button class="btn btn-main" onclick="exportData()">CORRECTO (DESCARGAR)</button><button class="btn btn-danger" onclick="namingIdx=0;setStep(6)">REPETIR</button>`;
+if(step===7) {
+    updateFinalUI();
+}
 }
 
 function uB() { const v = document.getElementById('cI').value; document.getElementById('bN').disabled = v === ""; document.getElementById('bM').disabled = v !== ""; }
@@ -358,15 +380,51 @@ pCenter.ty = Math.max(0.1, Math.min(0.9, my/1080));
 });
 canvas.addEventListener('pointerup', () => draggingIdx = null);
 
-function exportData() {
-let csv = "ID;Col;Fila;Score;TS\n";
-cellScores.forEach(s => csv += `${trayID};${colNames[LETTERS[s.c]]};${s.r+1};${s.score};${tsCapture}\n`);
-const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'})); a.download = `${trayID}.csv`; a.click();
-const i = document.createElement('a'); i.href = canvas.toDataURL('image/jpeg', 0.8); i.download = `${trayID}.jpg`; i.click();
-ui.innerHTML = `<button class="btn btn-main" onclick="location.reload()">¿OTRA FOTO?</button>`;
+function updateFinalUI() {
+    let html = `
+        <div style="display:flex; flex-direction:column; width:100%; align-items:center;">
+            <button class="btn btn-main" onclick="downloadCSV()">DESCARGAR CSV</button>
+            <button class="btn btn-alt" onclick="downloadImage()">DESCARGAR IMAGEN</button>
+            <button class="btn btn-danger" style="margin-top:10px;" onclick="namingIdx=0;setStep(6)">REPETIR NOMBRES</button>
+    `;
+
+    if (csvDownloaded && imgDownloaded) {
+        html += `<button class="btn" style="background:#f39c12; margin-top:20px;" onclick="location.reload()">+ NUEVA CAPTURA</button>`;
+    }
+
+    html += `</div>`;
+    ui.innerHTML = html;
 }
 
+function downloadCSV() {
+    let csv = "ID;Col;Fila;Score;TS\n";
+    cellScores.forEach(s => {
+        csv += `${trayID};${colNames[LETTERS[s.c]]};${s.r+1};${s.score};${tsCapture}\n`;
+    });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+    a.download = `DATOS_${trayID}.csv`;
+    a.click();
+    csvDownloaded = true;
+    updateFinalUI();
+}
+
+function downloadImage() {
+    const i = document.createElement('a');
+    i.href = canvas.toDataURL('image/jpeg', 0.9);
+    i.download = `REPORTE_${trayID}.jpg`;
+    i.click();
+    imgDownloaded = true;
+    updateFinalUI();
+}
 init();
+
+
+
+
+
+
+
 </script>
 </body>
 </html>
