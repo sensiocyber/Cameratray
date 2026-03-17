@@ -7,11 +7,18 @@
     <style>
        * { box-sizing: border-box; touch-action: none; }
     body { 
-        margin: 0; background: #111; font-family: sans-serif; 
-        height: 100vh; display: flex; flex-direction: row; 
-        overflow: hidden; color: white; 
-    }
-    #view-container { 
+    margin: 0; 
+    background: #111; 
+    font-family: sans-serif; 
+    /* Usa dvh para adaptarse dinámicamente si la barra de direcciones sube/baja */
+    height: 100%; 
+    width: 100%;
+    display: flex; 
+    flex-direction: row; 
+    overflow: hidden; 
+    position: fixed; /* Evita que el cuerpo rebote o haga scroll elástico */
+}
+#view-container { 
     flex: 1; 
     position: relative; 
     background: #000; 
