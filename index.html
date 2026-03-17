@@ -23,15 +23,19 @@
     overflow: hidden; /* Vital para Android */
 }
     canvas { 
-        max-width: 100%; max-height: 100%; 
-        touch-action: none; /* Esto evita que el navegador intente hacer scroll al tocar el canvas */
-        cursor: crosshair;
-        object-fit: contain; display: block; 
-        image-rendering: auto; border: 1px solid #333; 
-    }
+    max-width: 100%; 
+    max-height: 100%; 
+    width: auto;   /* Deja que el navegador calcule el ancho */
+    height: auto;  /* Deja que el navegador calcule el alto */
+    object-fit: contain; 
+    display: block; 
+    touch-action: none;
+    image-rendering: auto; 
+    border: 1px solid #333; 
+}
     video { position: absolute; width: 1px; height: 1px; opacity: 0; }
     #ui-panel { 
-        flex: 0 0 180px; background: #222; border-left: 3px solid #444; 
+        flex: 0 0 200px; background: #222; border-left: 3px solid #444; 
         display: flex; flex-direction: column; align-items: center; 
         padding: 10px; z-index: 100; overflow-y: auto; 
         
